@@ -19,8 +19,8 @@
     --on-accent:#FFFFFF;
     --separator:#E0E0E0;
     --fill:rgba(128,126,125,0.12);
-    --glass:rgba(255,255,255,0.72);
-    --glass-border:rgba(255,255,255,0.45);
+    --glass:rgba(255,255,255,0.55);
+    --glass-border:rgba(255,255,255,0.55);
     --teal:#00C3D0;
     --teal-soft:rgba(0,195,208,0.14);
     --amber:#E8A317;
@@ -37,6 +37,7 @@
     --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
     --shadow-card:0 1px 14px rgba(0,0,0,0.11), 0 1px 4px rgba(0,0,0,0.05);
     --shadow-bar:0 -2px 14px rgba(0,0,0,0.14);
+    --shadow-float:0 8px 28px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.08);
     --shadow-hero:0 4px 14px rgba(0,0,0,0.32);
     color-scheme:light;
   }
@@ -53,8 +54,8 @@
       --on-accent:#121212;
       --separator:#303030;
       --fill:rgba(120,120,120,0.24);
-      --glass:rgba(40,40,40,0.72);
-      --glass-border:rgba(255,255,255,0.10);
+      --glass:rgba(40,40,40,0.50);
+      --glass-border:rgba(255,255,255,0.14);
       --teal:#00D2E0;
       --teal-soft:rgba(0,210,224,0.18);
       --amber:#FFB524;
@@ -64,6 +65,7 @@
       --success:#34C759;
       --shadow-card:0 1px 14px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
       --shadow-bar:0 -2px 14px rgba(0,0,0,0.5);
+      --shadow-float:0 10px 30px rgba(0,0,0,0.55), 0 2px 10px rgba(0,0,0,0.35);
       --shadow-hero:0 4px 14px rgba(0,0,0,0.5);
       color-scheme:dark;
     }
@@ -80,8 +82,8 @@
     --on-accent:#121212;
     --separator:#303030;
     --fill:rgba(120,120,120,0.24);
-    --glass:rgba(40,40,40,0.72);
-    --glass-border:rgba(255,255,255,0.10);
+    --glass:rgba(40,40,40,0.50);
+    --glass-border:rgba(255,255,255,0.14);
     --teal:#00D2E0;
     --teal-soft:rgba(0,210,224,0.18);
     --amber:#FFB524;
@@ -91,6 +93,7 @@
     --success:#34C759;
     --shadow-card:0 1px 14px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
     --shadow-bar:0 -2px 14px rgba(0,0,0,0.5);
+    --shadow-float:0 10px 30px rgba(0,0,0,0.55), 0 2px 10px rgba(0,0,0,0.35);
     --shadow-hero:0 4px 14px rgba(0,0,0,0.5);
     color-scheme:dark;
   }
@@ -122,7 +125,8 @@
      in-page header — with top padding standing in for that native bar. */
   .app-body{
     flex:1;overflow-y:auto;
-    padding:calc(var(--sp-4) + env(safe-area-inset-top,0px)) var(--sp-4) var(--sp-5);
+    padding:calc(var(--sp-4) + env(safe-area-inset-top,0px)) var(--sp-4)
+      calc(86px + env(safe-area-inset-bottom,0px));
   }
   .view{display:none;}
   .view.active{display:block;}
@@ -391,23 +395,32 @@
   }
   .profile h2{font:700 20px 'Inter',sans-serif;color:var(--fg);margin:0 0 var(--sp-2);letter-spacing:-0.012em;}
 
-  /* ---------- bottom nav (glass) ---------- */
+  /* ---------- bottom nav: floating glass pill, detached from the edges
+     so the content scrolling underneath bleeds its colors through the
+     blur (heavy backdrop-filter + saturation, low-opacity glass fill) ---------- */
   .tabbar{
-    flex-shrink:0;display:flex;
+    position:absolute;
+    left:var(--sp-5);right:var(--sp-5);
+    bottom:calc(var(--sp-3) + env(safe-area-inset-bottom,0px));
+    display:flex;
+    border-radius:var(--radius-pill);
     background:var(--glass);
-    backdrop-filter:blur(20px);
-    -webkit-backdrop-filter:blur(20px);
-    border-top:1px solid var(--glass-border);
-    box-shadow:var(--shadow-bar);
-    padding:var(--sp-2) 0 calc(var(--sp-2) + env(safe-area-inset-bottom,0px));
+    backdrop-filter:blur(28px) saturate(190%);
+    -webkit-backdrop-filter:blur(28px) saturate(190%);
+    border:1px solid var(--glass-border);
+    box-shadow:var(--shadow-float);
+    padding:7px;
   }
   .tab{
-    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
     cursor:pointer;color:var(--fg-tertiary);
-    font:500 10.5px 'Inter',sans-serif;background:none;border:none;
+    border-radius:var(--radius-pill);
+    padding:6px 4px 7px;
+    font:500 10px 'Inter',sans-serif;background:none;border:none;
+    transition:background .15s ease,color .15s ease;
   }
-  .tab svg{width:21px;height:21px;stroke-width:1.75;}
-  .tab.active{color:var(--fg);}
+  .tab svg{width:20px;height:20px;stroke-width:1.75;}
+  .tab.active{color:var(--fg);background:var(--fill);}
   .tab.active svg{stroke-width:2.1;}
 
   @media (prefers-reduced-motion:no-preference){
