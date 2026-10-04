@@ -158,18 +158,18 @@
 
   /* ---------- segmented chips ---------- */
   .seg{
-    display:flex;gap:var(--sp-2);margin-bottom:var(--sp-4);
+    display:flex;gap:2px;align-items:center;margin-bottom:12px;
     overflow-x:auto;scrollbar-width:none;
   }
   .seg::-webkit-scrollbar{display:none;}
   .seg-btn{
-    flex-shrink:0;padding:7px 16px;border-radius:var(--radius-pill);
-    font:500 13px 'Inter',sans-serif;color:var(--fg-secondary);
-    background:var(--fill);border:none;cursor:pointer;white-space:nowrap;
+    flex-shrink:0;height:34px;padding:0 14px;border-radius:var(--radius-pill);
+    font:500 14.5px 'Inter',sans-serif;color:var(--fg-secondary);
+    background:transparent;border:none;cursor:pointer;white-space:nowrap;
     transition:background .15s ease,color .15s ease,transform .1s ease;
   }
   .seg-btn.active{background:var(--accent);color:var(--on-accent);}
-  .seg-sep{flex-shrink:0;align-self:center;width:1px;height:18px;margin:0 2px;background:var(--separator);}
+  .seg-sep{flex-shrink:0;align-self:center;width:1px;height:18px;margin:0 6px;background:var(--separator);}
   .seg-btn:active,.tab:active,.btn-icon:active{transform:scale(0.9);}
 
   /* ---------- cards ---------- */
@@ -355,7 +355,7 @@
   .btn-icon svg{width:16px;height:16px;stroke-width:2;}
   .detail-title{font:700 24px/1.25 'Inter',sans-serif;letter-spacing:-0.02em;color:var(--fg);flex:1;}
   .star-btn svg{color:var(--fg-tertiary);}
-  .star-btn.active svg{color:var(--amber);}
+  .star-btn.active svg{color:var(--fg);}
 
   .detail-tag{margin:var(--sp-4) 0 2px;}
   .detail-desc{font:400 15px/1.6 'Inter',sans-serif;color:var(--fg-secondary);margin:var(--sp-3) 0 var(--sp-4);}
@@ -644,7 +644,7 @@
 
         <div class="pf-group">
           <button class="pf-row" data-go="favorites">
-            <span class="pf-tile"><svg viewBox="0 0 24 24"><use href="#i-bookmark"/></svg></span>
+            <span class="pf-tile"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></span>
             <span class="pf-txt">
               <div class="pf-title">Избранное</div>
               <div class="pf-desc">материалы, которые сохранишь</div>
@@ -668,7 +668,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 04.10 23:55</div>
+        <div class="pf-build">сборка 05.10 chips</div>
       </div>
     </section>
 
@@ -684,7 +684,7 @@
       <span>Обучение</span>
     </button>
     <button class="tab" data-tab="favorites">
-      <svg viewBox="0 0 24 24"><use href="#i-bookmark"/></svg>
+      <svg viewBox="0 0 24 24"><use href="#i-star"/></svg>
       <span>Избранное</span>
     </button>
     <button class="tab" data-tab="profile">
