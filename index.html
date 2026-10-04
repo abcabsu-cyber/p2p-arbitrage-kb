@@ -188,8 +188,11 @@
   .badge.security{background:var(--danger-soft);color:var(--danger);}
 
   /* ---------- card thumbnail: soft gradient mesh + frosted mock panel,
-     eyebrow/title overlaid bottom-left — generated per category+title,
-     same pattern as the reference app's auto-generated preview cards ---------- */
+     eyebrow/title overlaid bottom-left. Each of the 10 sections gets its
+     own gradient and its own mock-panel pattern (relevant to what the
+     section is actually about), rather than one reused decoration — this
+     mirrors how the reference app's cards each carry a distinct, content-
+     relevant preview image instead of a generic repeated texture. ---------- */
   .card-thumb{
     position:relative;
     aspect-ratio:2.75/1;
@@ -198,9 +201,16 @@
     padding:var(--sp-4);
     display:flex;flex-direction:column;justify-content:flex-end;
   }
-  .card-thumb.basics{background:linear-gradient(115deg,#FFE9D6 0%,#F4DCF3 38%,#DDE3FB 68%,#D8F3EA 100%);}
-  .card-thumb.exchange{background:linear-gradient(115deg,#FFF3C4 0%,#FFE1C7 38%,#FFD7E0 68%,#E9DFFC 100%);}
+  .card-thumb.base{background:linear-gradient(115deg,#FFE9D6 0%,#F4DCF3 38%,#DDE3FB 68%,#D8F3EA 100%);}
+  .card-thumb.reg{background:linear-gradient(115deg,#D8F3EA 0%,#DDE3FB 38%,#F4DCF3 68%,#FFE9D6 100%);}
+  .card-thumb.exchanges{background:linear-gradient(115deg,#FFF3C4 0%,#FFE1C7 38%,#FFD7E0 68%,#E9DFFC 100%);}
+  .card-thumb.firststeps{background:linear-gradient(115deg,#DDE3FB 0%,#D8F3EA 38%,#FFE9D6 68%,#FFF3C4 100%);}
+  .card-thumb.status{background:linear-gradient(115deg,#E9DFFC 0%,#D8F3EA 38%,#DDE3FB 68%,#FFE1C7 100%);}
+  .card-thumb.firstad{background:linear-gradient(115deg,#FFD7E0 0%,#FFE1C7 38%,#FFE9D6 68%,#E9DFFC 100%);}
+  .card-thumb.buysell{background:linear-gradient(115deg,#D8F3EA 0%,#E9DFFC 38%,#FFD7E0 68%,#DDE3FB 100%);}
+  .card-thumb.competition{background:linear-gradient(115deg,#FFE1C7 0%,#FFD7E0 38%,#DDE3FB 68%,#D8F3EA 100%);}
   .card-thumb.security{background:linear-gradient(115deg,#FFE0DA 0%,#FFD3E0 38%,#F6D9F7 68%,#E2DEFB 100%);}
+  .card-thumb.support{background:linear-gradient(115deg,#DDE3FB 0%,#E9DFFC 38%,#D8F3EA 68%,#FFF3C4 100%);}
 
   .thumb-eyebrow{
     font:700 9.5px 'Inter',sans-serif;letter-spacing:0.07em;text-transform:uppercase;
@@ -222,16 +232,84 @@
     box-shadow:0 10px 24px rgba(20,20,30,0.10);
     padding:10px;
     display:flex;flex-direction:column;gap:7px;
+    justify-content:center;
   }
   .thumb-mock-line{height:5px;border-radius:3px;background:rgba(30,30,35,0.38);}
   .thumb-mock-line.w1{width:78%;}
   .thumb-mock-line.w2{width:48%;background:rgba(30,30,35,0.24);}
+
+  /* bars pattern — base overview / leaderboard */
   .thumb-bars{flex:1;display:flex;align-items:flex-end;gap:5px;padding-top:2px;}
   .thumb-bars i{
     display:block;flex:1;border-radius:2px 2px 0 0;
     background:rgba(30,30,35,0.22);
   }
   .thumb-bars i.peak{background:rgba(30,30,35,0.5);}
+
+  /* form pattern — registration / ad listing */
+  .thumb-form-field{
+    height:16px;border-radius:5px;background:rgba(255,255,255,0.65);
+    border:1px solid rgba(30,30,35,0.12);
+  }
+  .thumb-form-btn{
+    height:16px;border-radius:5px;background:rgba(30,30,35,0.72);
+    margin-top:2px;width:60%;
+  }
+
+  /* rows pattern — exchange ranking list */
+  .thumb-row{display:flex;align-items:center;gap:6px;}
+  .thumb-row-dot{width:7px;height:7px;border-radius:50%;background:rgba(30,30,35,0.2);flex-shrink:0;}
+  .thumb-row-dot.on{background:rgba(30,30,35,0.55);}
+  .thumb-row-line{flex:1;height:5px;border-radius:3px;background:rgba(30,30,35,0.2);}
+  .thumb-row-line.on{background:rgba(30,30,35,0.4);}
+
+  /* steps pattern — first steps progress */
+  .thumb-steps{display:flex;align-items:center;}
+  .thumb-step-dot{
+    width:15px;height:15px;border-radius:50%;background:rgba(30,30,35,0.55);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .thumb-step-dot.off{background:rgba(30,30,35,0.16);}
+  .thumb-step-dot svg{width:8px;height:8px;color:#fff;stroke-width:3;}
+  .thumb-step-line{flex:1;height:2px;background:rgba(30,30,35,0.22);min-width:4px;}
+
+  /* ring pattern — status / progress */
+  .thumb-ring{
+    width:38px;height:38px;border-radius:50%;margin:0 auto;
+    background:conic-gradient(rgba(30,30,35,0.55) 0deg 260deg, rgba(30,30,35,0.14) 260deg 360deg);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .thumb-ring-inner{
+    width:27px;height:27px;border-radius:50%;background:rgba(255,255,255,0.9);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .thumb-ring-inner svg{width:13px;height:13px;color:rgba(20,20,22,0.65);stroke-width:3;}
+
+  /* swap pattern — buy/sell */
+  .thumb-swap-row{display:flex;align-items:center;justify-content:center;gap:5px;}
+  .thumb-swap-row svg{width:13px;height:13px;color:rgba(20,20,22,0.4);flex-shrink:0;}
+
+  /* chat pattern — support dialogue */
+  .thumb-bubble{border-radius:9px;padding:0;height:14px;}
+  .thumb-bubble.them{width:72%;background:rgba(30,30,35,0.14);align-self:flex-start;}
+  .thumb-bubble.me{width:58%;background:rgba(255,255,255,0.8);align-self:flex-end;}
+
+  /* big-icon pattern — security */
+  .thumb-icon-big{
+    width:40px;height:40px;border-radius:50%;margin:0 auto;
+    background:rgba(255,255,255,0.55);
+    border:1px dashed rgba(30,30,35,0.25);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .thumb-icon-big svg{width:18px;height:18px;color:rgba(20,20,22,0.62);stroke-width:2;}
+
+  .thumb-pill{
+    display:inline-flex;align-items:center;justify-content:center;
+    height:16px;padding:0 7px;border-radius:999px;
+    background:rgba(30,30,35,0.12);
+    font:600 8px 'Inter',sans-serif;color:rgba(20,20,22,0.6);
+  }
+
   .thumb-badge{
     position:absolute;right:-8px;bottom:-8px;
     display:flex;align-items:center;gap:4px;
@@ -4029,23 +4107,62 @@
     return t.content.firstElementChild;
   }
 
-  var BAR_HEIGHTS = ['40%','62%','48%','100%','72%','56%'];
+  // Each section gets a mock-panel pattern that actually relates to what
+  // it covers, instead of one generic bar chart repeated on every card.
+  var THUMB_PATTERNS = {
+    base: function(){
+      var h = ['38%','60%','46%','100%','70%','54%'];
+      return '<div class="thumb-mock-line w1"></div><div class="thumb-mock-line w2"></div>'+
+        '<div class="thumb-bars">'+h.map(function(v,i){ return '<i style="height:'+v+'"'+(i===3?' class="peak"':'')+'></i>'; }).join('')+'</div>';
+    },
+    reg: function(){
+      return '<div class="thumb-form-field"></div><div class="thumb-form-field" style="width:70%"></div><div class="thumb-form-btn"></div>';
+    },
+    exchanges: function(){
+      return [1,2,3].map(function(i){
+        return '<div class="thumb-row"><span class="thumb-row-dot'+(i===1?' on':'')+'"></span><span class="thumb-row-line'+(i===1?' on':'')+'" style="max-width:'+(90-i*14)+'%"></span></div>';
+      }).join('');
+    },
+    firststeps: function(){
+      return '<div class="thumb-steps">'+
+        '<span class="thumb-step-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg></span>'+
+        '<span class="thumb-step-line"></span>'+
+        '<span class="thumb-step-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg></span>'+
+        '<span class="thumb-step-line"></span>'+
+        '<span class="thumb-step-dot off"></span>'+
+      '</div>';
+    },
+    status: function(){
+      return '<div class="thumb-ring"><div class="thumb-ring-inner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg></div></div>';
+    },
+    firstad: function(){
+      return '<div class="thumb-mock-line w1"></div><div class="thumb-mock-line w2" style="width:36%"></div><div style="margin-top:3px;"><span class="thumb-pill">от 98.40 ₽</span></div>';
+    },
+    buysell: function(){
+      return '<div class="thumb-swap-row"><span class="thumb-pill">USDT</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h12m0 0l-4-4m4 4l-4 4M17 17H5m0 0l4 4m-4-4l4-4"/></svg><span class="thumb-pill">RUB</span></div>';
+    },
+    competition: function(){
+      var h = ['100%','74%','52%'];
+      return '<div class="thumb-bars" style="gap:8px;">'+h.map(function(v,i){ return '<i style="height:'+v+'"'+(i===0?' class="peak"':'')+'></i>'; }).join('')+'</div>';
+    },
+    security: function(s){
+      return '<div class="thumb-icon-big"><svg viewBox="0 0 24 24"><use href="#'+s.icon+'"/></svg></div>';
+    },
+    support: function(){
+      return '<div class="thumb-bubble them"></div><div class="thumb-bubble me"></div><div class="thumb-bubble them" style="width:48%;"></div>';
+    }
+  };
 
   function cardHTML(s){
+    var mock = (THUMB_PATTERNS[s.id] || THUMB_PATTERNS.base)(s);
     return (
       '<article class="card" data-id="'+s.id+'">'+
         '<div class="card-title">'+s.title+'</div>'+
         '<div class="card-desc">'+s.desc+'</div>'+
-        '<div class="card-thumb '+s.category+'">'+
+        '<div class="card-thumb '+s.id+'">'+
           '<div class="thumb-eyebrow">'+CATEGORY_LABEL[s.category]+'</div>'+
           '<div class="thumb-title">'+s.title+'</div>'+
-          '<div class="thumb-mock">'+
-            '<div class="thumb-mock-line w1"></div>'+
-            '<div class="thumb-mock-line w2"></div>'+
-            '<div class="thumb-bars">'+
-              BAR_HEIGHTS.map(function(h,i){ return '<i style="height:'+h+'"'+(i===3?' class="peak"':'')+'></i>'; }).join('')+
-            '</div>'+
-          '</div>'+
+          '<div class="thumb-mock">'+mock+'</div>'+
           '<div class="thumb-badge"><span class="dot"><svg viewBox="0 0 24 24"><use href="#'+s.icon+'"/></svg></span><span class="bar"></span></div>'+
         '</div>'+
       '</article>'
