@@ -1,5 +1,5 @@
 <title>P2P Арбитраж</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -102,6 +102,9 @@
   }
 
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+  /* pan/scroll only: no pinch-zoom, no double-tap zoom */
+  html,body,.app{touch-action:pan-x pan-y;}
   html,body{height:100%;}
   body{
     margin:0;
@@ -166,6 +169,7 @@
     transition:background .15s ease,color .15s ease,transform .1s ease;
   }
   .seg-btn.active{background:var(--accent);color:var(--on-accent);}
+  .seg-sep{flex-shrink:0;align-self:center;width:1px;height:18px;margin:0 2px;background:var(--separator);}
   .seg-btn:active,.tab:active,.btn-icon:active{transform:scale(0.9);}
 
   /* ---------- cards ---------- */
@@ -670,7 +674,7 @@
   <nav class="tabbar">
     <button class="tab active" data-tab="list">
       <svg viewBox="0 0 24 24"><use href="#i-home"/></svg>
-      <span>Разделы</span>
+      <span>Материалы</span>
     </button>
     <button class="tab" data-tab="learning">
       <svg viewBox="0 0 24 24"><use href="#i-graduation"/></svg>
@@ -4370,6 +4374,7 @@
         renderList();
       });
       box.appendChild(chip);
+      if(c.id === "all") box.appendChild(el('<span class="seg-sep"></span>'));
     });
   }
 
@@ -4401,8 +4406,8 @@
     empty.hidden = list.length !== 0;
     Array.prototype.forEach.call(box.querySelectorAll(".card"), function(cardEl){
       cardEl.addEventListener("click", function(){
-        openDetail(cardEl.getAttribute("data-id"));
         switchTab("list");
+        openDetail(cardEl.getAttribute("data-id"));
       });
     });
   }
@@ -4452,10 +4457,25 @@
     renderFavorites();
   }
 
+  // Hiding a view collapses the page height and the browser resets the
+  // scroll to the top, so remember where each view was and put it back.
+  var scrollMem = {};
+  function getScroll(){
+    var body = document.querySelector(".app-body");
+    return Math.max(window.pageYOffset || 0, body ? body.scrollTop : 0);
+  }
+  function setScroll(y){
+    var body = document.querySelector(".app-body");
+    window.scrollTo(0, y);
+    if(body) body.scrollTop = y;
+  }
   function showView(id){
+    var cur = document.querySelector(".view.active");
+    if(cur) scrollMem[cur.id] = getScroll();
     Array.prototype.forEach.call(document.querySelectorAll(".view"), function(v){
       v.classList.toggle("active", v.id === id);
     });
+    setScroll(id === "view-detail" ? 0 : (scrollMem[id] || 0));
   }
 
   function switchTab(tab){
@@ -4490,6 +4510,17 @@
 
   renderChips();
   renderList();
+
+  // belt and braces against zoom (iOS gesture events, multi-touch, ctrl+wheel)
+  ["gesturestart","gesturechange","gestureend"].forEach(function(t){
+    document.addEventListener(t, function(e){ e.preventDefault(); });
+  });
+  document.addEventListener("touchmove", function(e){
+    if(e.touches && e.touches.length > 1) e.preventDefault();
+  }, {passive:false});
+  document.addEventListener("wheel", function(e){
+    if(e.ctrlKey) e.preventDefault();
+  }, {passive:false});
 
   // Profile rows (Избранное / Обучение) and the theme switcher
   document.getElementById("view-profile").addEventListener("click", function(e){
