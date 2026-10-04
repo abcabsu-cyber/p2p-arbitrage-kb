@@ -4271,12 +4271,16 @@
     var eff = effectiveTheme();
     if(eff) root.setAttribute("data-theme", eff);
     else root.removeAttribute("data-theme");
-    try{
-      // keep the area behind the page (overscroll) in the page's own color
-      if(inTelegram() && tg.setBackgroundColor){
-        tg.setBackgroundColor(getComputedStyle(root).getPropertyValue("--canvas").trim());
-      }
-    }catch(e){}
+    // Paint Telegram's own chrome (title bar, area behind the page, bottom
+    // bar) in the page's canvas color so the widget and the page read as one
+    // surface. With a custom header color Telegram also switches the native
+    // "Назад"/title to a contrasting white/black instead of its blue accent.
+    if(inTelegram()){
+      var canvas = getComputedStyle(root).getPropertyValue("--canvas").trim();
+      ["setHeaderColor", "setBackgroundColor", "setBottomBarColor"].forEach(function(fn){
+        try{ if(tg[fn]) tg[fn](canvas); }catch(e){}
+      });
+    }
     syncThemeSeg();
   }
 
