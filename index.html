@@ -1,0 +1,4217 @@
+<title>P2P Арбитраж</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  /* Layout concept: warm-canvas iOS-style app shell — glass header and
+     glass bottom bar over a single scroll area that swaps list/detail;
+     elevated white cards with soft layered shadows, pill chips/badges. */
+  :root{
+    --canvas:#F5F3F0;
+    --elevated:#FFFFFF;
+    --fg:#000000;
+    --fg-secondary:rgba(67,66,66,0.60);
+    --fg-tertiary:rgba(67,66,66,0.30);
+    --fg-quaternary:rgba(67,66,66,0.18);
+    --accent:#1C1C1E;
+    --accent-pressed:#000000;
+    --on-accent:#FFFFFF;
+    --separator:#E0E0E0;
+    --fill:rgba(128,126,125,0.12);
+    --glass:rgba(255,255,255,0.72);
+    --glass-border:rgba(255,255,255,0.45);
+    --teal:#00C3D0;
+    --teal-soft:rgba(0,195,208,0.14);
+    --amber:#E8A317;
+    --amber-soft:rgba(232,163,23,0.14);
+    --danger:#D6412F;
+    --danger-soft:rgba(214,65,47,0.09);
+    --success:#34C759;
+    --radius-xs:8px;
+    --radius-sm:12px;
+    --radius-md:16px;
+    --radius-lg:20px;
+    --radius-xl:24px;
+    --radius-pill:999px;
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
+    --shadow-card:0 1px 14px rgba(0,0,0,0.11), 0 1px 4px rgba(0,0,0,0.05);
+    --shadow-bar:0 -2px 14px rgba(0,0,0,0.14);
+    --shadow-hero:0 4px 14px rgba(0,0,0,0.32);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --canvas:#121212;
+      --elevated:#1F1E1E;
+      --fg:#FFFFFF;
+      --fg-secondary:rgba(245,243,240,0.60);
+      --fg-tertiary:rgba(245,243,240,0.30);
+      --fg-quaternary:rgba(245,243,240,0.18);
+      --accent:#F5F3F0;
+      --accent-pressed:#FFFFFF;
+      --on-accent:#121212;
+      --separator:#303030;
+      --fill:rgba(120,120,120,0.24);
+      --glass:rgba(40,40,40,0.72);
+      --glass-border:rgba(255,255,255,0.10);
+      --teal:#00D2E0;
+      --teal-soft:rgba(0,210,224,0.18);
+      --amber:#FFB524;
+      --amber-soft:rgba(255,181,36,0.18);
+      --danger:#FF4F3F;
+      --danger-soft:rgba(255,79,63,0.18);
+      --success:#34C759;
+      --shadow-card:0 1px 14px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
+      --shadow-bar:0 -2px 14px rgba(0,0,0,0.5);
+      --shadow-hero:0 4px 14px rgba(0,0,0,0.5);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --canvas:#121212;
+    --elevated:#1F1E1E;
+    --fg:#FFFFFF;
+    --fg-secondary:rgba(245,243,240,0.60);
+    --fg-tertiary:rgba(245,243,240,0.30);
+    --fg-quaternary:rgba(245,243,240,0.18);
+    --accent:#F5F3F0;
+    --accent-pressed:#FFFFFF;
+    --on-accent:#121212;
+    --separator:#303030;
+    --fill:rgba(120,120,120,0.24);
+    --glass:rgba(40,40,40,0.72);
+    --glass-border:rgba(255,255,255,0.10);
+    --teal:#00D2E0;
+    --teal-soft:rgba(0,210,224,0.18);
+    --amber:#FFB524;
+    --amber-soft:rgba(255,181,36,0.18);
+    --danger:#FF4F3F;
+    --danger-soft:rgba(255,79,63,0.18);
+    --success:#34C759;
+    --shadow-card:0 1px 14px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
+    --shadow-bar:0 -2px 14px rgba(0,0,0,0.5);
+    --shadow-hero:0 4px 14px rgba(0,0,0,0.5);
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--canvas);
+    color:var(--fg);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    justify-content:center;
+  }
+  .app{
+    width:100%;
+    max-width:460px;
+    min-height:100%;
+    background:var(--canvas);
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+
+  /* ---------- body ---------- */
+  /* Telegram draws its own native title bar (icon + app name) around this
+     page, so the page itself starts directly at the search field — no
+     in-page header — with top padding standing in for that native bar. */
+  .app-body{
+    flex:1;overflow-y:auto;
+    padding:calc(var(--sp-4) + env(safe-area-inset-top,0px)) var(--sp-4) var(--sp-5);
+  }
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ---------- search (filled, iOS-style) ---------- */
+  .search-wrap{position:relative;margin-bottom:var(--sp-3);}
+  .search-wrap svg{
+    position:absolute;left:12px;top:50%;transform:translateY(-50%);
+    width:16px;height:16px;color:var(--fg-tertiary);pointer-events:none;
+  }
+  .search-input{
+    width:100%;height:40px;
+    border-radius:var(--radius-sm);
+    border:none;
+    background:var(--fill);
+    color:var(--fg);
+    font:400 15px 'Inter',sans-serif;
+    padding:0 var(--sp-4) 0 36px;
+    outline:none;
+  }
+  .search-input::placeholder{color:var(--fg-tertiary);}
+  .search-input:focus{box-shadow:0 0 0 2px var(--accent) inset;}
+
+  /* ---------- segmented chips ---------- */
+  .seg{
+    display:flex;gap:var(--sp-2);margin-bottom:var(--sp-4);
+    overflow-x:auto;scrollbar-width:none;
+  }
+  .seg::-webkit-scrollbar{display:none;}
+  .seg-btn{
+    flex-shrink:0;padding:7px 16px;border-radius:var(--radius-pill);
+    font:500 13px 'Inter',sans-serif;color:var(--fg-secondary);
+    background:var(--fill);border:none;cursor:pointer;white-space:nowrap;
+    transition:background .15s ease,color .15s ease,transform .1s ease;
+  }
+  .seg-btn.active{background:var(--accent);color:var(--on-accent);}
+  .seg-btn:active,.tab:active,.btn-icon:active{transform:scale(0.9);}
+
+  /* ---------- cards ---------- */
+  .card-list{display:flex;flex-direction:column;gap:var(--sp-4);}
+  .card{
+    background:var(--elevated);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);
+    padding:var(--sp-4);
+    cursor:pointer;
+    display:flex;flex-direction:column;gap:var(--sp-3);
+    transition:transform .12s ease;
+  }
+  .card-title{font:700 18px/1.28 'Inter',sans-serif;color:var(--fg);letter-spacing:-0.012em;}
+  .card-desc{
+    font:400 14.5px/1.55 'Inter',sans-serif;color:var(--fg-secondary);
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .badge{
+    display:inline-flex;align-items:center;
+    border-radius:var(--radius-pill);
+    padding:3px 10px;
+    font:600 11px 'Inter',sans-serif;letter-spacing:0.01em;
+  }
+  .badge.basics{background:var(--teal-soft);color:var(--teal);}
+  .badge.exchange{background:var(--amber-soft);color:var(--amber);}
+  .badge.security{background:var(--danger-soft);color:var(--danger);}
+
+  /* ---------- card thumbnail: soft gradient mesh + frosted mock panel,
+     eyebrow/title overlaid bottom-left — generated per category+title,
+     same pattern as the reference app's auto-generated preview cards ---------- */
+  .card-thumb{
+    position:relative;
+    aspect-ratio:2.75/1;
+    border-radius:var(--radius-lg);
+    overflow:hidden;
+    padding:var(--sp-4);
+    display:flex;flex-direction:column;justify-content:flex-end;
+  }
+  .card-thumb.basics{background:linear-gradient(115deg,#FFE9D6 0%,#F4DCF3 38%,#DDE3FB 68%,#D8F3EA 100%);}
+  .card-thumb.exchange{background:linear-gradient(115deg,#FFF3C4 0%,#FFE1C7 38%,#FFD7E0 68%,#E9DFFC 100%);}
+  .card-thumb.security{background:linear-gradient(115deg,#FFE0DA 0%,#FFD3E0 38%,#F6D9F7 68%,#E2DEFB 100%);}
+
+  .thumb-eyebrow{
+    font:700 9.5px 'Inter',sans-serif;letter-spacing:0.07em;text-transform:uppercase;
+    color:rgba(20,20,22,0.5);margin-bottom:5px;
+  }
+  .thumb-title{
+    font:700 15px/1.25 'Inter',sans-serif;color:rgba(17,17,19,0.92);
+    letter-spacing:-0.01em;max-width:52%;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+
+  .thumb-mock{
+    position:absolute;right:7%;top:12%;bottom:12%;
+    width:46%;
+    background:rgba(255,255,255,0.55);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,0.65);
+    border-radius:var(--radius-sm);
+    box-shadow:0 10px 24px rgba(20,20,30,0.10);
+    padding:10px;
+    display:flex;flex-direction:column;gap:7px;
+  }
+  .thumb-mock-line{height:5px;border-radius:3px;background:rgba(30,30,35,0.38);}
+  .thumb-mock-line.w1{width:78%;}
+  .thumb-mock-line.w2{width:48%;background:rgba(30,30,35,0.24);}
+  .thumb-bars{flex:1;display:flex;align-items:flex-end;gap:5px;padding-top:2px;}
+  .thumb-bars i{
+    display:block;flex:1;border-radius:2px 2px 0 0;
+    background:rgba(30,30,35,0.22);
+  }
+  .thumb-bars i.peak{background:rgba(30,30,35,0.5);}
+  .thumb-badge{
+    position:absolute;right:-8px;bottom:-8px;
+    display:flex;align-items:center;gap:4px;
+    background:rgba(255,255,255,0.92);
+    border-radius:var(--radius-pill);
+    padding:5px 9px 5px 5px;
+    box-shadow:0 6px 14px rgba(20,20,30,0.14);
+  }
+  .thumb-badge .dot{
+    width:16px;height:16px;border-radius:50%;
+    background:rgba(30,30,35,0.08);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .thumb-badge .dot svg{width:9px;height:9px;color:rgba(20,20,22,0.6);stroke-width:3;}
+  .thumb-badge .bar{width:18px;height:4px;border-radius:2px;background:rgba(30,30,35,0.3);}
+
+  .empty{
+    text-align:center;color:var(--fg-secondary);
+    font-size:13.5px;padding:48px 16px;line-height:1.55;
+  }
+
+  /* ---------- detail view ---------- */
+  .detail-head{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:2px;}
+  .btn-icon{
+    width:34px;height:34px;border-radius:50%;
+    background:var(--fill);border:none;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;flex-shrink:0;color:var(--fg);
+    transition:transform .1s ease;
+  }
+  .btn-icon svg{width:16px;height:16px;stroke-width:2;}
+  .detail-title{font:700 24px/1.25 'Inter',sans-serif;letter-spacing:-0.02em;color:var(--fg);flex:1;}
+  .star-btn svg{color:var(--fg-tertiary);}
+  .star-btn.active svg{color:var(--amber);}
+
+  .detail-tag{margin:var(--sp-4) 0 2px;}
+  .detail-desc{font:400 15px/1.6 'Inter',sans-serif;color:var(--fg-secondary);margin:var(--sp-3) 0 var(--sp-4);}
+
+  .detail-icon-row{
+    display:flex;align-items:center;gap:var(--sp-3);
+    padding:var(--sp-3) var(--sp-4);
+    background:var(--elevated);
+    border-radius:var(--radius-md);
+    box-shadow:var(--shadow-card);
+    margin-bottom:var(--sp-5);
+  }
+  .detail-icon-row span{font:500 13px 'Inter',sans-serif;color:var(--fg-secondary);}
+
+  .outline-title{
+    font:600 12px 'Inter',sans-serif;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--fg-tertiary);margin:4px 0 2px;
+  }
+  .outline-item{
+    display:flex;gap:var(--sp-3);padding:var(--sp-3) 0;
+    border-top:1px solid var(--separator);
+    font:400 15px/1.5 'Inter',sans-serif;color:var(--fg);
+  }
+  .outline-num{
+    width:22px;height:22px;border-radius:50%;
+    background:var(--accent);color:var(--on-accent);
+    font:600 11px 'Inter',sans-serif;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;margin-top:1px;
+  }
+  .note{
+    margin-top:var(--sp-5);padding:var(--sp-3) var(--sp-4);
+    background:var(--fill);border-radius:var(--radius-sm);
+    font:400 13px/1.55 'Inter',sans-serif;color:var(--fg-secondary);
+  }
+
+  /* ---------- profile ---------- */
+  .profile{text-align:center;padding:56px 20px;}
+  .app-mark{
+    width:48px;height:48px;border-radius:var(--radius-md);
+    background:var(--accent);color:var(--on-accent);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:13px;letter-spacing:-0.01em;
+    margin:0 auto var(--sp-4);
+  }
+  .profile h2{font:700 20px 'Inter',sans-serif;color:var(--fg);margin:0 0 var(--sp-2);letter-spacing:-0.012em;}
+
+  /* ---------- bottom nav (glass) ---------- */
+  .tabbar{
+    flex-shrink:0;display:flex;
+    background:var(--glass);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border-top:1px solid var(--glass-border);
+    box-shadow:var(--shadow-bar);
+    padding:var(--sp-2) 0 calc(var(--sp-2) + env(safe-area-inset-bottom,0px));
+  }
+  .tab{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    cursor:pointer;color:var(--fg-tertiary);
+    font:500 10.5px 'Inter',sans-serif;background:none;border:none;
+  }
+  .tab svg{width:21px;height:21px;stroke-width:1.75;}
+  .tab.active{color:var(--fg);}
+  .tab.active svg{stroke-width:2.1;}
+
+  @media (prefers-reduced-motion:no-preference){
+    .card:active{transform:scale(0.985);}
+  }
+</style>
+
+<!-- icon library -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<g id="i-layers" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 2 2 7l10 5 10-5-10-5Z"/>
+  <path d="M2 17l10 5 10-5"/>
+  <path d="M2 12l10 5 10-5"/>
+</g>
+<g id="i-user-plus" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M15 19a6 6 0 0 0-12 0"/>
+  <circle cx="9" cy="8" r="4"/>
+  <line x1="19" y1="8" x2="19" y2="14"/>
+  <line x1="16" y1="11" x2="22" y2="11"/>
+</g>
+<g id="i-building" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="4" y="3" width="10" height="18" rx="1"/>
+  <path d="M14 10h6v11h-6"/>
+  <line x1="7.5" y1="7" x2="10.5" y2="7"/>
+  <line x1="7.5" y1="11" x2="10.5" y2="11"/>
+  <line x1="7.5" y1="15" x2="10.5" y2="15"/>
+</g>
+<g id="i-footprints" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M5 20c2-3 1-7-1-9 1-2 3-2 4 0 1 2 .5 6-1 9"/>
+  <circle cx="7" cy="8.5" r="1.4" fill="currentColor" stroke="none"/>
+  <path d="M19 15c-2 3-1 5-3 6-2-1-2-3-1-6 1-3 .5-5 2-5.5 1.5-.5 3.5 2 2 5.5Z"/>
+  <circle cx="18.5" cy="6.5" r="1.4" fill="currentColor" stroke="none"/>
+</g>
+<g id="i-badge-check" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 2l2.4 1.4 2.8-.3 1.1 2.6 2.6 1.1-.3 2.8L22 12l-1.4 2.4.3 2.8-2.6 1.1-1.1 2.6-2.8-.3L12 22l-2.4-1.4-2.8.3-1.1-2.6-2.6-1.1.3-2.8L2 12l1.4-2.4-.3-2.8 2.6-1.1 1.1-2.6 2.8.3Z"/>
+  <path d="M9 12l2 2 4-4"/>
+</g>
+<g id="i-megaphone" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M3 11v3a1 1 0 0 0 1 1h2l3.5 5V5L6 10H4a1 1 0 0 0-1 1Z"/>
+  <path d="M13 8.5a4 4 0 0 1 0 7"/>
+  <path d="M16.5 6a8 8 0 0 1 0 12"/>
+</g>
+<g id="i-swap" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M7 4v13"/>
+  <path d="M3 13l4 4 4-4"/>
+  <path d="M17 20V7"/>
+  <path d="M21 11l-4-4-4 4"/>
+</g>
+<g id="i-trophy" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"/>
+  <path d="M8 5H5a2 2 0 0 0 2 5"/>
+  <path d="M16 5h3a2 2 0 0 1-2 5"/>
+  <line x1="12" y1="13" x2="12" y2="17"/>
+  <path d="M8 21h8"/>
+  <path d="M9 21c0-2 1-3 3-3s3 1 3 3"/>
+</g>
+<g id="i-shield" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 2l8 3.5v5c0 5.6-3.4 9.3-8 11.5-4.6-2.2-8-5.9-8-11.5v-5L12 2Z"/>
+  <rect x="9.3" y="11" width="5.4" height="4.3" rx="1"/>
+  <path d="M10 11V9.2a2 2 0 0 1 4 0V11"/>
+</g>
+<g id="i-messages" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M3 4h12v9H8l-5 4V4Z"/>
+  <path d="M19 9h2v9l-5-4h-5v-3"/>
+</g>
+<g id="i-search" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="11" cy="11" r="7"/>
+  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+</g>
+<g id="i-chevron-right" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M9 18l6-6-6-6"/>
+</g>
+<g id="i-chevron-left" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M15 18l-6-6 6-6"/>
+</g>
+<g id="i-star" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17l-5.9 3.5 1.2-6.5-4.8-4.6 6.6-.9Z"/>
+</g>
+<g id="i-home" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M3 10.5L12 3l9 7.5"/>
+  <path d="M5.5 9.5V20a1 1 0 0 0 1 1h4v-6h3v6h4a1 1 0 0 0 1-1V9.5"/>
+</g>
+<g id="i-bookmark" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M6 3h12v18l-6-4.5L6 21V3Z"/>
+</g>
+<g id="i-user" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="8" r="4"/>
+  <path d="M4.5 20.5c1.2-4 4.4-6 7.5-6s6.3 2 7.5 6"/>
+</g>
+<g id="i-graduation" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M2 9l10-5 10 5-10 5-10-5Z"/>
+  <path d="M6 11.5V17c0 1.4 2.7 3 6 3s6-1.6 6-3v-5.5"/>
+  <path d="M22 9v6.5"/>
+</g>
+</defs>
+</svg>
+
+<div class="app" id="app">
+
+  <div class="app-body">
+
+    <!-- SECTIONS LIST -->
+    <section class="view active" id="view-list">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24"><use href="#i-search"/></svg>
+        <input class="search-input" id="searchInput" placeholder="Поиск по материалам" autocomplete="off">
+      </div>
+      <div class="seg" id="chips"></div>
+      <div class="card-list" id="cardList"></div>
+      <div class="empty" id="emptyState" hidden>Ничего не нашлось. Попробуйте другой запрос или раздел.</div>
+    </section>
+
+    <!-- DETAIL -->
+    <section class="view" id="view-detail"></section>
+
+    <!-- LEARNING -->
+    <section class="view" id="view-learning">
+      <div class="profile">
+        <div class="app-mark" style="margin:0 auto var(--sp-4);width:48px;height:48px;font-size:13px;border-radius:var(--radius-md);">P2P</div>
+        <h2>Обучение</h2>
+        <p class="empty" style="padding:0;">Здесь появятся короткие уроки и практические задания по каждому разделу базы знаний.</p>
+      </div>
+    </section>
+
+    <!-- FAVORITES -->
+    <section class="view" id="view-favorites">
+      <div class="card-list" id="favList"></div>
+      <div class="empty" id="favEmpty" hidden>Пока пусто. Откройте раздел и нажмите на звёздочку, чтобы добавить его сюда.</div>
+    </section>
+
+    <!-- PROFILE -->
+    <section class="view" id="view-profile">
+      <div class="profile">
+        <div class="app-mark">P2P</div>
+        <h2>Профиль</h2>
+        <p class="empty" style="padding:0;">Экран профиля появится в следующей версии — прогресс по разделам, заметки, доступ к обновлениям материалов.</p>
+      </div>
+      <div id="tgDiag" style="margin-top:var(--sp-4);padding:var(--sp-3);background:var(--fill);border-radius:var(--radius-md);font:12px/1.5 var(--font-mono,monospace);color:var(--fg-secondary);white-space:pre-wrap;"></div>
+    </section>
+
+  </div>
+
+  <nav class="tabbar">
+    <button class="tab active" data-tab="list">
+      <svg viewBox="0 0 24 24"><use href="#i-home"/></svg>
+      <span>Разделы</span>
+    </button>
+    <button class="tab" data-tab="learning">
+      <svg viewBox="0 0 24 24"><use href="#i-graduation"/></svg>
+      <span>Обучение</span>
+    </button>
+    <button class="tab" data-tab="favorites">
+      <svg viewBox="0 0 24 24"><use href="#i-bookmark"/></svg>
+      <span>Избранное</span>
+    </button>
+    <button class="tab" data-tab="profile">
+      <svg viewBox="0 0 24 24"><use href="#i-user"/></svg>
+      <span>Профиль</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+// WebView
+(function () {
+  var eventHandlers = {};
+
+  var locationHash = '';
+  try {
+    locationHash = location.hash.toString();
+  } catch (e) {}
+
+  var initParams = urlParseHashParams(locationHash);
+  var storedParams = sessionStorageGet('initParams');
+  if (storedParams) {
+    for (var key in storedParams) {
+      if (typeof initParams[key] === 'undefined') {
+        initParams[key] = storedParams[key];
+      }
+    }
+  }
+  sessionStorageSet('initParams', initParams);
+
+  var isIframe = false, iFrameStyle;
+  try {
+    isIframe = (window.parent != null && window != window.parent);
+    if (isIframe) {
+      window.addEventListener('message', function (event) {
+        if (event.source !== window.parent) return;
+        try {
+          var dataParsed = JSON.parse(event.data);
+        } catch (e) {
+          return;
+        }
+        if (!dataParsed || !dataParsed.eventType) {
+          return;
+        }
+        if (dataParsed.eventType == 'set_custom_style') {
+          if (event.origin === 'https://web.telegram.org') {
+            iFrameStyle.innerHTML = dataParsed.eventData;
+          }
+        } else if (dataParsed.eventType == 'reload_iframe') {
+          try {
+            window.parent.postMessage(JSON.stringify({eventType: 'iframe_will_reload'}), '*');
+          } catch (e) {}
+          location.reload();
+        } else {
+          receiveEvent(dataParsed.eventType, dataParsed.eventData);
+        }
+      });
+      iFrameStyle = document.createElement('style');
+      document.head.appendChild(iFrameStyle);
+      try {
+        window.parent.postMessage(JSON.stringify({eventType: 'iframe_ready', eventData: {reload_supported: true}}), '*');
+      } catch (e) {}
+    }
+  } catch (e) {}
+
+  function urlSafeDecode(urlencoded) {
+    try {
+      urlencoded = urlencoded.replace(/\+/g, '%20');
+      return decodeURIComponent(urlencoded);
+    } catch (e) {
+      return urlencoded;
+    }
+  }
+
+  function urlParseHashParams(locationHash) {
+    locationHash = locationHash.replace(/^#/, '');
+    var params = {};
+    if (!locationHash.length) {
+      return params;
+    }
+    if (locationHash.indexOf('=') < 0 && locationHash.indexOf('?') < 0) {
+      params._path = urlSafeDecode(locationHash);
+      return params;
+    }
+    var qIndex = locationHash.indexOf('?');
+    if (qIndex >= 0) {
+      var pathParam = locationHash.substr(0, qIndex);
+      params._path = urlSafeDecode(pathParam);
+      locationHash = locationHash.substr(qIndex + 1);
+    }
+    var query_params = urlParseQueryString(locationHash);
+    for (var k in query_params) {
+      params[k] = query_params[k];
+    }
+    return params;
+  }
+
+  function urlParseQueryString(queryString) {
+    var params = {};
+    if (!queryString.length) {
+      return params;
+    }
+    var queryStringParams = queryString.split('&');
+    var i, param, paramName, paramValue;
+    for (i = 0; i < queryStringParams.length; i++) {
+      param = queryStringParams[i].split('=');
+      paramName = urlSafeDecode(param[0]);
+      paramValue = param[1] == null ? null : urlSafeDecode(param[1]);
+      params[paramName] = paramValue;
+    }
+    return params;
+  }
+
+  // Telegram apps will implement this logic to add service params (e.g. tgShareScoreUrl) to game URL
+  function urlAppendHashParams(url, addHash) {
+    // url looks like 'https://game.com/path?query=1#hash'
+    // addHash looks like 'tgShareScoreUrl=' + encodeURIComponent('tgb://share_game_score?hash=very_long_hash123')
+
+    var ind = url.indexOf('#');
+    if (ind < 0) {
+      // https://game.com/path -> https://game.com/path#tgShareScoreUrl=etc
+      return url + '#' + addHash;
+    }
+    var curHash = url.substr(ind + 1);
+    if (curHash.indexOf('=') >= 0 || curHash.indexOf('?') >= 0) {
+      // https://game.com/#hash=1 -> https://game.com/#hash=1&tgShareScoreUrl=etc
+      // https://game.com/#path?query -> https://game.com/#path?query&tgShareScoreUrl=etc
+      return url + '&' + addHash;
+    }
+    // https://game.com/#hash -> https://game.com/#hash?tgShareScoreUrl=etc
+    if (curHash.length > 0) {
+      return url + '?' + addHash;
+    }
+    // https://game.com/# -> https://game.com/#tgShareScoreUrl=etc
+    return url + addHash;
+  }
+
+  function postEvent(eventType, callback, eventData) {
+    if (!callback) {
+      callback = function () {};
+    }
+    if (eventData === undefined) {
+      eventData = '';
+    }
+    console.log('[Telegram.WebView] > postEvent', eventType, eventData);
+
+    if (window.TelegramWebviewProxy !== undefined) {
+      TelegramWebviewProxy.postEvent(eventType, JSON.stringify(eventData));
+      callback();
+    }
+    else if (window.external && 'notify' in window.external) {
+      window.external.notify(JSON.stringify({eventType: eventType, eventData: eventData}));
+      callback();
+    }
+    else if (isIframe) {
+      try {
+        var trustedTarget = 'https://web.telegram.org';
+        // For now we don't restrict target, for testing purposes
+        trustedTarget = '*';
+        window.parent.postMessage(JSON.stringify({eventType: eventType, eventData: eventData}), trustedTarget);
+        callback();
+      } catch (e) {
+        callback(e);
+      }
+    }
+    else {
+      callback({notAvailable: true});
+    }
+  };
+
+  function receiveEvent(eventType, eventData) {
+    console.log('[Telegram.WebView] < receiveEvent', eventType, eventData);
+    callEventCallbacks(eventType, function(callback) {
+      callback(eventType, eventData);
+    });
+  }
+
+  function callEventCallbacks(eventType, func) {
+    var curEventHandlers = eventHandlers[eventType];
+    if (curEventHandlers === undefined ||
+        !curEventHandlers.length) {
+      return;
+    }
+    for (var i = 0; i < curEventHandlers.length; i++) {
+      try {
+        func(curEventHandlers[i]);
+      } catch (e) {}
+    }
+  }
+
+  function onEvent(eventType, callback) {
+    if (eventHandlers[eventType] === undefined) {
+      eventHandlers[eventType] = [];
+    }
+    var index = eventHandlers[eventType].indexOf(callback);
+    if (index === -1) {
+      eventHandlers[eventType].push(callback);
+    }
+  };
+
+  function offEvent(eventType, callback) {
+    if (eventHandlers[eventType] === undefined) {
+      return;
+    }
+    var index = eventHandlers[eventType].indexOf(callback);
+    if (index === -1) {
+      return;
+    }
+    eventHandlers[eventType].splice(index, 1);
+  };
+
+  function openProtoUrl(url) {
+    if (!url.match(/^(web\+)?tgb?:\/\/./)) {
+      return false;
+    }
+    var useIframe = navigator.userAgent.match(/iOS|iPhone OS|iPhone|iPod|iPad/i) ? true : false;
+    if (useIframe) {
+      var iframeContEl = document.getElementById('tgme_frame_cont') || document.body;
+      var iframeEl = document.createElement('iframe');
+      iframeContEl.appendChild(iframeEl);
+      var pageHidden = false;
+      var enableHidden = function () {
+        pageHidden = true;
+      };
+      window.addEventListener('pagehide', enableHidden, false);
+      window.addEventListener('blur', enableHidden, false);
+      if (iframeEl !== null) {
+        iframeEl.src = url;
+      }
+      setTimeout(function() {
+        if (!pageHidden) {
+          window.location = url;
+        }
+        window.removeEventListener('pagehide', enableHidden, false);
+        window.removeEventListener('blur', enableHidden, false);
+      }, 2000);
+    }
+    else {
+      window.location = url;
+    }
+    return true;
+  }
+
+  function sessionStorageSet(key, value) {
+    try {
+      window.sessionStorage.setItem('__telegram__' + key, JSON.stringify(value));
+      return true;
+    } catch(e) {}
+    return false;
+  }
+  function sessionStorageGet(key) {
+    try {
+      return JSON.parse(window.sessionStorage.getItem('__telegram__' + key));
+    } catch(e) {}
+    return null;
+  }
+
+  if (!window.Telegram) {
+    window.Telegram = {};
+  }
+  window.Telegram.WebView = {
+    initParams: initParams,
+    isIframe: isIframe,
+    onEvent: onEvent,
+    offEvent: offEvent,
+    postEvent: postEvent,
+    receiveEvent: receiveEvent,
+    callEventCallbacks: callEventCallbacks
+  };
+
+  window.Telegram.Utils = {
+    urlSafeDecode: urlSafeDecode,
+    urlParseQueryString: urlParseQueryString,
+    urlParseHashParams: urlParseHashParams,
+    urlAppendHashParams: urlAppendHashParams,
+    sessionStorageSet: sessionStorageSet,
+    sessionStorageGet: sessionStorageGet
+  };
+
+  // For Windows Phone app
+  window.TelegramGameProxy_receiveEvent = receiveEvent;
+
+  // App backward compatibility
+  window.TelegramGameProxy = {
+    receiveEvent: receiveEvent
+  };
+})();
+
+// WebApp
+(function () {
+  var Utils = window.Telegram.Utils;
+  var WebView = window.Telegram.WebView;
+  var initParams = WebView.initParams;
+  var isIframe = WebView.isIframe;
+
+  var WebApp = {};
+  var webAppInitData = '', webAppInitDataUnsafe = {};
+  var themeParams = {}, colorScheme = 'light';
+  var webAppVersion = '6.0';
+  var webAppPlatform = 'unknown';
+  var webAppIsActive = true;
+  var webAppIsFullscreen = false;
+  var webAppIsOrientationLocked = false;
+  var webAppBackgroundColor = 'bg_color';
+  var webAppHeaderColorKey = 'bg_color';
+  var webAppHeaderColor = null;
+
+  if (initParams.tgWebAppData && initParams.tgWebAppData.length) {
+    webAppInitData = initParams.tgWebAppData;
+    webAppInitDataUnsafe = Utils.urlParseQueryString(webAppInitData);
+    for (var key in webAppInitDataUnsafe) {
+      var val = webAppInitDataUnsafe[key];
+      try {
+        if (val.substr(0, 1) == '{' && val.substr(-1) == '}' ||
+            val.substr(0, 1) == '[' && val.substr(-1) == ']') {
+          webAppInitDataUnsafe[key] = JSON.parse(val);
+        }
+      } catch (e) {}
+    }
+  }
+  var stored_theme_params = Utils.sessionStorageGet('themeParams');
+  if (initParams.tgWebAppThemeParams && initParams.tgWebAppThemeParams.length) {
+    var themeParamsRaw = initParams.tgWebAppThemeParams;
+    try {
+      var theme_params = JSON.parse(themeParamsRaw);
+      if (theme_params) {
+        setThemeParams(theme_params);
+      }
+    } catch (e) {}
+  }
+  if (stored_theme_params) {
+    setThemeParams(stored_theme_params);
+  }
+  var stored_def_colors = Utils.sessionStorageGet('defaultColors');
+  if (initParams.tgWebAppDefaultColors && initParams.tgWebAppDefaultColors.length) {
+    var defColorsRaw = initParams.tgWebAppDefaultColors;
+    try {
+      var def_colors = JSON.parse(defColorsRaw);
+      if (def_colors) {
+        setDefaultColors(def_colors);
+      }
+    } catch (e) {}
+  }
+  if (stored_def_colors) {
+    setDefaultColors(stored_def_colors);
+  }
+  if (initParams.tgWebAppVersion) {
+    webAppVersion = initParams.tgWebAppVersion;
+  }
+  if (initParams.tgWebAppPlatform) {
+    webAppPlatform = initParams.tgWebAppPlatform;
+  }
+
+  var stored_fullscreen = Utils.sessionStorageGet('isFullscreen');
+  if (initParams.tgWebAppFullscreen) {
+    setFullscreen(true);
+  }
+  if (stored_fullscreen) {
+    setFullscreen(stored_fullscreen == 'yes');
+  }
+
+  var stored_orientation_lock = Utils.sessionStorageGet('isOrientationLocked');
+  if (stored_orientation_lock) {
+    setOrientationLock(stored_orientation_lock == 'yes');
+  }
+
+  function onThemeChanged(eventType, eventData) {
+    if (eventData.theme_params) {
+      setThemeParams(eventData.theme_params);
+      window.Telegram.WebApp.MainButton.setParams({});
+      window.Telegram.WebApp.SecondaryButton.setParams({});
+      updateHeaderColor();
+      updateBackgroundColor();
+      updateBottomBarColor();
+      receiveWebViewEvent('themeChanged');
+    }
+  }
+
+  var lastWindowHeight = window.innerHeight;
+  function onViewportChanged(eventType, eventData) {
+    if (eventData.height) {
+      window.removeEventListener('resize', onWindowResize);
+      setViewportHeight(eventData);
+    }
+  }
+
+  function onWindowResize(e) {
+    if (lastWindowHeight != window.innerHeight) {
+      lastWindowHeight = window.innerHeight;
+      receiveWebViewEvent('viewportChanged', {
+        isStateStable: true
+      });
+    }
+  }
+
+  function onSafeAreaChanged(eventType, eventData) {
+    if (eventData) {
+      setSafeAreaInset(eventData);
+    }
+  }
+  function onContentSafeAreaChanged(eventType, eventData) {
+    if (eventData) {
+      setContentSafeAreaInset(eventData);
+    }
+  }
+
+  function onVisibilityChanged(eventType, eventData) {
+    if (eventData.is_visible) {
+      webAppIsActive = true;
+      receiveWebViewEvent('activated');
+    } else {
+      webAppIsActive = false;
+      receiveWebViewEvent('deactivated');
+    }
+  }
+
+  function linkHandler(e) {
+    if (e.metaKey || e.ctrlKey) return;
+    var el = e.target;
+    while (el.tagName != 'A' && el.parentNode) {
+      el = el.parentNode;
+    }
+    if (el.tagName == 'A' &&
+        el.target != '_blank' &&
+        (el.protocol == 'http:' || el.protocol == 'https:') &&
+        isTmeHostname(el.hostname)) {
+      WebApp.openTelegramLink(el.href);
+      e.preventDefault();
+    }
+  }
+
+  function strTrim(str) {
+    return str.toString().replace(/^\s+|\s+$/g, '');
+  }
+
+  function isTmeHostname(hostname) {
+    hostname = hostname.toString().toLowerCase();
+    return hostname == 't.me' || hostname == 'telegram.me';
+  }
+
+  function receiveWebViewEvent(eventType) {
+    var args = Array.prototype.slice.call(arguments);
+    eventType = args.shift();
+    WebView.callEventCallbacks('webview:' + eventType, function(callback) {
+      callback.apply(WebApp, args);
+    });
+  }
+
+  function onWebViewEvent(eventType, callback) {
+    WebView.onEvent('webview:' + eventType, callback);
+  };
+
+  function offWebViewEvent(eventType, callback) {
+    WebView.offEvent('webview:' + eventType, callback);
+  };
+
+  function setCssProperty(name, value) {
+    var root = document.documentElement;
+    if (root && root.style && root.style.setProperty) {
+      root.style.setProperty('--tg-' + name, value);
+    }
+  }
+
+  function setFullscreen(is_fullscreen) {
+    webAppIsFullscreen = !!is_fullscreen;
+    Utils.sessionStorageSet('isFullscreen', webAppIsFullscreen ? 'yes' : 'no');
+  }
+
+  function setOrientationLock(is_locked) {
+    webAppIsOrientationLocked = !!is_locked;
+    Utils.sessionStorageSet('isOrientationLocked', webAppIsOrientationLocked ? 'yes' : 'no');
+  }
+
+  function setThemeParams(theme_params) {
+    // temp iOS fix
+    if (theme_params.bg_color == '#1c1c1d' &&
+        theme_params.bg_color == theme_params.secondary_bg_color) {
+      theme_params.secondary_bg_color = '#2c2c2e';
+    }
+    var color;
+    for (var key in theme_params) {
+      if (color = parseColorToHex(theme_params[key])) {
+        themeParams[key] = color;
+        if (key == 'bg_color') {
+          colorScheme = isColorDark(color) ? 'dark' : 'light'
+          setCssProperty('color-scheme', colorScheme);
+        }
+        key = 'theme-' + key.split('_').join('-');
+        setCssProperty(key, color);
+      }
+    }
+    Utils.sessionStorageSet('themeParams', themeParams);
+  }
+
+  function setDefaultColors(def_colors) {
+    if (colorScheme == 'dark') {
+      if (def_colors.bg_dark_color) {
+        webAppBackgroundColor = def_colors.bg_dark_color;
+      }
+      if (def_colors.header_dark_color) {
+        webAppHeaderColorKey = null;
+        webAppHeaderColor = def_colors.header_dark_color;
+      }
+    } else {
+      if (def_colors.bg_color) {
+        webAppBackgroundColor = def_colors.bg_color;
+      }
+      if (def_colors.header_color) {
+        webAppHeaderColorKey = null;
+        webAppHeaderColor = def_colors.header_color;
+      }
+    }
+    Utils.sessionStorageSet('defaultColors', def_colors);
+  }
+
+  var webAppCallbacks = {};
+  function generateCallbackId(len) {
+    var tries = 100;
+    while (--tries) {
+      var id = '', chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', chars_len = chars.length;
+      for (var i = 0; i < len; i++) {
+        id += chars[Math.floor(Math.random() * chars_len)];
+      }
+      if (!webAppCallbacks[id]) {
+        webAppCallbacks[id] = {};
+        return id;
+      }
+    }
+    throw Error('WebAppCallbackIdGenerateFailed');
+  }
+
+  var viewportHeight = false, viewportStableHeight = false, isExpanded = true;
+  function setViewportHeight(data) {
+    if (typeof data !== 'undefined') {
+      isExpanded = !!data.is_expanded;
+      viewportHeight = data.height;
+      if (data.is_state_stable) {
+        viewportStableHeight = data.height;
+      }
+      receiveWebViewEvent('viewportChanged', {
+        isStateStable: !!data.is_state_stable
+      });
+    }
+    var height, stable_height;
+    if (viewportHeight !== false) {
+      height = (viewportHeight - bottomBarHeight) + 'px';
+    } else {
+      height = bottomBarHeight ? 'calc(100vh - ' + bottomBarHeight + 'px)' : '100vh';
+    }
+    if (viewportStableHeight !== false) {
+      stable_height = (viewportStableHeight - bottomBarHeight) + 'px';
+    } else {
+      stable_height = bottomBarHeight ? 'calc(100vh - ' + bottomBarHeight + 'px)' : '100vh';
+    }
+    setCssProperty('viewport-height', height);
+    setCssProperty('viewport-stable-height', stable_height);
+  }
+
+  var safeAreaInset = {top: 0, bottom: 0, left: 0, right: 0};
+  function setSafeAreaInset(data) {
+    if (typeof data !== 'undefined') {
+      if (typeof data.top !== 'undefined') {
+        safeAreaInset.top = data.top;
+      }
+      if (typeof data.bottom !== 'undefined') {
+        safeAreaInset.bottom = data.bottom;
+      }
+      if (typeof data.left !== 'undefined') {
+        safeAreaInset.left = data.left;
+      }
+      if (typeof data.right !== 'undefined') {
+        safeAreaInset.right = data.right;
+      }
+      receiveWebViewEvent('safeAreaChanged');
+    }
+    setCssProperty('safe-area-inset-top', safeAreaInset.top + 'px');
+    setCssProperty('safe-area-inset-bottom', safeAreaInset.bottom + 'px');
+    setCssProperty('safe-area-inset-left', safeAreaInset.left + 'px');
+    setCssProperty('safe-area-inset-right', safeAreaInset.right + 'px');
+  }
+
+  var contentSafeAreaInset = {top: 0, bottom: 0, left: 0, right: 0};
+  function setContentSafeAreaInset(data) {
+    if (typeof data !== 'undefined') {
+      if (typeof data.top !== 'undefined') {
+        contentSafeAreaInset.top = data.top;
+      }
+      if (typeof data.bottom !== 'undefined') {
+        contentSafeAreaInset.bottom = data.bottom;
+      }
+      if (typeof data.left !== 'undefined') {
+        contentSafeAreaInset.left = data.left;
+      }
+      if (typeof data.right !== 'undefined') {
+        contentSafeAreaInset.right = data.right;
+      }
+      receiveWebViewEvent('contentSafeAreaChanged');
+    }
+    setCssProperty('content-safe-area-inset-top', contentSafeAreaInset.top + 'px');
+    setCssProperty('content-safe-area-inset-bottom', contentSafeAreaInset.bottom + 'px');
+    setCssProperty('content-safe-area-inset-left', contentSafeAreaInset.left + 'px');
+    setCssProperty('content-safe-area-inset-right', contentSafeAreaInset.right + 'px');
+  }
+
+  var isClosingConfirmationEnabled = false;
+  function setClosingConfirmation(need_confirmation) {
+    if (!versionAtLeast('6.2')) {
+      console.warn('[Telegram.WebApp] Closing confirmation is not supported in version ' + webAppVersion);
+      return;
+    }
+    isClosingConfirmationEnabled = !!need_confirmation;
+    WebView.postEvent('web_app_setup_closing_behavior', false, {need_confirmation: isClosingConfirmationEnabled});
+  }
+
+  var isVerticalSwipesEnabled = true;
+  function toggleVerticalSwipes(enable_swipes) {
+    if (!versionAtLeast('7.7')) {
+      console.warn('[Telegram.WebApp] Changing swipes behavior is not supported in version ' + webAppVersion);
+      return;
+    }
+    isVerticalSwipesEnabled = !!enable_swipes;
+    WebView.postEvent('web_app_setup_swipe_behavior', false, {allow_vertical_swipe: isVerticalSwipesEnabled});
+  }
+
+  function onFullscreenChanged(eventType, eventData) {
+    setFullscreen(eventData.is_fullscreen);
+    receiveWebViewEvent('fullscreenChanged');
+  }
+  function onFullscreenFailed(eventType, eventData) {
+    if (eventData.error == 'ALREADY_FULLSCREEN' && !webAppIsFullscreen) {
+      setFullscreen(true);
+    }
+    receiveWebViewEvent('fullscreenFailed', {
+      error: eventData.error
+    });
+  }
+
+  function toggleOrientationLock(locked) {
+    if (!versionAtLeast('8.0')) {
+      console.warn('[Telegram.WebApp] Orientation locking is not supported in version ' + webAppVersion);
+      return;
+    }
+    setOrientationLock(locked);
+    WebView.postEvent('web_app_toggle_orientation_lock', false, {locked: webAppIsOrientationLocked});
+  }
+
+  var homeScreenCallbacks = [];
+  function onHomeScreenAdded(eventType, eventData) {
+    receiveWebViewEvent('homeScreenAdded');
+  }
+  function onHomeScreenChecked(eventType, eventData) {
+    var status = eventData.status || 'unknown';
+    if (homeScreenCallbacks.length > 0) {
+      for (var i = 0; i < homeScreenCallbacks.length; i++) {
+        var callback = homeScreenCallbacks[i];
+        callback(status);
+      }
+      homeScreenCallbacks = [];
+    }
+    receiveWebViewEvent('homeScreenChecked', {
+      status: status
+    });
+  }
+
+  var WebAppShareMessageOpened = false;
+  function onPreparedMessageSent(eventType, eventData) {
+    if (WebAppShareMessageOpened) {
+      var requestData = WebAppShareMessageOpened;
+      WebAppShareMessageOpened = false;
+      if (requestData.callback) {
+        requestData.callback(true);
+      }
+      receiveWebViewEvent('shareMessageSent');
+    }
+  }
+  function onPreparedMessageFailed(eventType, eventData) {
+    if (WebAppShareMessageOpened) {
+      var requestData = WebAppShareMessageOpened;
+      WebAppShareMessageOpened = false;
+      if (requestData.callback) {
+        requestData.callback(false);
+      }
+      receiveWebViewEvent('shareMessageFailed', {
+        error: eventData.error
+      });
+    }
+  }
+
+  var WebAppRequestChatOpened = false;
+  function onRequestedChatSent(eventType, eventData) {
+    if (WebAppRequestChatOpened) {
+      var requestData = WebAppRequestChatOpened;
+      WebAppRequestChatOpened = false;
+      if (requestData.callback) {
+        requestData.callback(true);
+      }
+      receiveWebViewEvent('requestedChatSent');
+    }
+  }
+  function onRequestedChatFailed(eventType, eventData) {
+    if (WebAppRequestChatOpened) {
+      var requestData = WebAppRequestChatOpened;
+      WebAppRequestChatOpened = false;
+      if (requestData.callback) {
+        requestData.callback(false);
+      }
+      receiveWebViewEvent('requestedChatFailed', {
+        error: eventData.error
+      });
+    }
+  }
+
+  var WebAppEmojiStatusRequested = false;
+  function onEmojiStatusSet(eventType, eventData) {
+    if (WebAppEmojiStatusRequested) {
+      var requestData = WebAppEmojiStatusRequested;
+      WebAppEmojiStatusRequested = false;
+      if (requestData.callback) {
+        requestData.callback(true);
+      }
+      receiveWebViewEvent('emojiStatusSet');
+    }
+  }
+  function onEmojiStatusFailed(eventType, eventData) {
+    if (WebAppEmojiStatusRequested) {
+      var requestData = WebAppEmojiStatusRequested;
+      WebAppEmojiStatusRequested = false;
+      if (requestData.callback) {
+        requestData.callback(false);
+      }
+      receiveWebViewEvent('emojiStatusFailed', {
+        error: eventData.error
+      });
+    }
+  }
+  var WebAppEmojiStatusAccessRequested = false;
+  function onEmojiStatusAccessRequested(eventType, eventData) {
+    if (WebAppEmojiStatusAccessRequested) {
+      var requestData = WebAppEmojiStatusAccessRequested;
+      WebAppEmojiStatusAccessRequested = false;
+      if (requestData.callback) {
+        requestData.callback(eventData.status == 'allowed');
+      }
+      receiveWebViewEvent('emojiStatusAccessRequested', {
+        status: eventData.status
+      });
+    }
+  }
+
+  var webAppPopupOpened = false;
+  function onPopupClosed(eventType, eventData) {
+    if (webAppPopupOpened) {
+      var popupData = webAppPopupOpened;
+      webAppPopupOpened = false;
+      var button_id = null;
+      if (typeof eventData.button_id !== 'undefined') {
+        button_id = eventData.button_id;
+      }
+      if (popupData.callback) {
+        popupData.callback(button_id);
+      }
+      receiveWebViewEvent('popupClosed', {
+        button_id: button_id
+      });
+    }
+  }
+
+
+  function getHeaderColor() {
+    if (webAppHeaderColorKey == 'secondary_bg_color') {
+      return themeParams.secondary_bg_color;
+    } else if (webAppHeaderColorKey == 'bg_color') {
+      return themeParams.bg_color;
+    }
+    return webAppHeaderColor;
+  }
+  function setHeaderColor(color) {
+    if (!versionAtLeast('6.1')) {
+      console.warn('[Telegram.WebApp] Header color is not supported in version ' + webAppVersion);
+      return;
+    }
+    if (!versionAtLeast('6.9')) {
+      if (themeParams.bg_color &&
+          themeParams.bg_color == color) {
+        color = 'bg_color';
+      } else if (themeParams.secondary_bg_color &&
+                 themeParams.secondary_bg_color == color) {
+        color = 'secondary_bg_color';
+      }
+    }
+    var head_color = null, color_key = null;
+    if (color == 'bg_color' || color == 'secondary_bg_color') {
+      color_key = color;
+    } else if (versionAtLeast('6.9')) {
+      head_color = parseColorToHex(color);
+      if (!head_color) {
+        console.error('[Telegram.WebApp] Header color format is invalid', color);
+        throw Error('WebAppHeaderColorInvalid');
+      }
+    }
+    if (!versionAtLeast('6.9') &&
+        color_key != 'bg_color' &&
+        color_key != 'secondary_bg_color') {
+      console.error('[Telegram.WebApp] Header color key should be one of Telegram.WebApp.themeParams.bg_color, Telegram.WebApp.themeParams.secondary_bg_color, \'bg_color\', \'secondary_bg_color\'', color);
+      throw Error('WebAppHeaderColorKeyInvalid');
+    }
+    webAppHeaderColorKey = color_key;
+    webAppHeaderColor = head_color;
+    updateHeaderColor();
+  }
+  var appHeaderColorKey = null, appHeaderColor = null;
+  function updateHeaderColor() {
+    if (appHeaderColorKey != webAppHeaderColorKey ||
+        appHeaderColor != webAppHeaderColor) {
+      appHeaderColorKey = webAppHeaderColorKey;
+      appHeaderColor = webAppHeaderColor;
+      if (appHeaderColor) {
+        WebView.postEvent('web_app_set_header_color', false, {color: webAppHeaderColor});
+      } else {
+        WebView.postEvent('web_app_set_header_color', false, {color_key: webAppHeaderColorKey});
+      }
+    }
+  }
+
+  function getBackgroundColor() {
+    if (webAppBackgroundColor == 'secondary_bg_color') {
+      return themeParams.secondary_bg_color;
+    } else if (webAppBackgroundColor == 'bg_color') {
+      return themeParams.bg_color;
+    }
+    return webAppBackgroundColor;
+  }
+  function setBackgroundColor(color) {
+    if (!versionAtLeast('6.1')) {
+      console.warn('[Telegram.WebApp] Background color is not supported in version ' + webAppVersion);
+      return;
+    }
+    var bg_color;
+    if (color == 'bg_color' || color == 'secondary_bg_color') {
+      bg_color = color;
+    } else {
+      bg_color = parseColorToHex(color);
+      if (!bg_color) {
+        console.error('[Telegram.WebApp] Background color format is invalid', color);
+        throw Error('WebAppBackgroundColorInvalid');
+      }
+    }
+    webAppBackgroundColor = bg_color;
+    updateBackgroundColor();
+  }
+  var appBackgroundColor = null;
+  function updateBackgroundColor() {
+    var color = getBackgroundColor();
+    if (appBackgroundColor != color) {
+      appBackgroundColor = color;
+      WebView.postEvent('web_app_set_background_color', false, {color: color});
+    }
+  }
+
+  var bottomBarColor = 'bottom_bar_bg_color';
+  function getBottomBarColor() {
+    if (bottomBarColor == 'bottom_bar_bg_color') {
+      return themeParams.bottom_bar_bg_color || themeParams.secondary_bg_color || '#ffffff';
+    } else if (bottomBarColor == 'secondary_bg_color') {
+      return themeParams.secondary_bg_color;
+    } else if (bottomBarColor == 'bg_color') {
+      return themeParams.bg_color;
+    }
+    return bottomBarColor;
+  }
+  function setBottomBarColor(color) {
+    if (!versionAtLeast('7.10')) {
+      console.warn('[Telegram.WebApp] Bottom bar color is not supported in version ' + webAppVersion);
+      return;
+    }
+    var bg_color;
+    if (color == 'bg_color' || color == 'secondary_bg_color' || color == 'bottom_bar_bg_color') {
+      bg_color = color;
+    } else {
+      bg_color = parseColorToHex(color);
+      if (!bg_color) {
+        console.error('[Telegram.WebApp] Bottom bar color format is invalid', color);
+        throw Error('WebAppBottomBarColorInvalid');
+      }
+    }
+    bottomBarColor = bg_color;
+    updateBottomBarColor();
+    window.Telegram.WebApp.SecondaryButton.setParams({});
+  }
+  var appBottomBarColor = null;
+  function updateBottomBarColor() {
+    var color = getBottomBarColor();
+    if (appBottomBarColor != color) {
+      appBottomBarColor = color;
+      WebView.postEvent('web_app_set_bottom_bar_color', false, {color: color});
+    }
+    if (initParams.tgWebAppDebug) {
+      updateDebugBottomBar();
+    }
+  }
+
+
+  function parseColorToHex(color) {
+    color += '';
+    var match;
+    if (match = /^\s*#([0-9a-f]{6})\s*$/i.exec(color)) {
+      return '#' + match[1].toLowerCase();
+    }
+    else if (match = /^\s*#([0-9a-f])([0-9a-f])([0-9a-f])\s*$/i.exec(color)) {
+      return ('#' + match[1] + match[1] + match[2] + match[2] + match[3] + match[3]).toLowerCase();
+    }
+    else if (match = /^\s*rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+\.{0,1}\d*))?\)\s*$/.exec(color)) {
+      var r = parseInt(match[1]), g = parseInt(match[2]), b = parseInt(match[3]);
+      r = (r < 16 ? '0' : '') + r.toString(16);
+      g = (g < 16 ? '0' : '') + g.toString(16);
+      b = (b < 16 ? '0' : '') + b.toString(16);
+      return '#' + r + g + b;
+    }
+    return false;
+  }
+
+  function isColorDark(rgb) {
+    rgb = rgb.replace(/[\s#]/g, '');
+    if (rgb.length == 3) {
+      rgb = rgb[0] + rgb[0] + rgb[1] + rgb[1] + rgb[2] + rgb[2];
+    }
+    var r = parseInt(rgb.substr(0, 2), 16);
+    var g = parseInt(rgb.substr(2, 2), 16);
+    var b = parseInt(rgb.substr(4, 2), 16);
+    var hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b));
+    return hsp < 120;
+  }
+
+  function versionCompare(v1, v2) {
+    if (typeof v1 !== 'string') v1 = '';
+    if (typeof v2 !== 'string') v2 = '';
+    v1 = v1.replace(/^\s+|\s+$/g, '').split('.');
+    v2 = v2.replace(/^\s+|\s+$/g, '').split('.');
+    var a = Math.max(v1.length, v2.length), i, p1, p2;
+    for (i = 0; i < a; i++) {
+      p1 = parseInt(v1[i]) || 0;
+      p2 = parseInt(v2[i]) || 0;
+      if (p1 == p2) continue;
+      if (p1 > p2) return 1;
+      return -1;
+    }
+    return 0;
+  }
+
+  function versionAtLeast(ver) {
+    return versionCompare(webAppVersion, ver) >= 0;
+  }
+
+  function byteLength(str) {
+    if (window.Blob) {
+      try { return new Blob([str]).size; } catch (e) {}
+    }
+    var s = str.length;
+    for (var i=str.length-1; i>=0; i--) {
+      var code = str.charCodeAt(i);
+      if (code > 0x7f && code <= 0x7ff) s++;
+      else if (code > 0x7ff && code <= 0xffff) s+=2;
+      if (code >= 0xdc00 && code <= 0xdfff) i--;
+    }
+    return s;
+  }
+
+  var BackButton = (function() {
+    var isVisible = false;
+
+    var backButton = {};
+    Object.defineProperty(backButton, 'isVisible', {
+      set: function(val){ setParams({is_visible: val}); },
+      get: function(){ return isVisible; },
+      enumerable: true
+    });
+
+    var curButtonState = null;
+
+    WebView.onEvent('back_button_pressed', onBackButtonPressed);
+
+    function onBackButtonPressed() {
+      receiveWebViewEvent('backButtonClicked');
+    }
+
+    function buttonParams() {
+      return {is_visible: isVisible};
+    }
+
+    function buttonState(btn_params) {
+      if (typeof btn_params === 'undefined') {
+        btn_params = buttonParams();
+      }
+      return JSON.stringify(btn_params);
+    }
+
+    function buttonCheckVersion() {
+      if (!versionAtLeast('6.1')) {
+        console.warn('[Telegram.WebApp] BackButton is not supported in version ' + webAppVersion);
+        return false;
+      }
+      return true;
+    }
+
+    function updateButton() {
+      var btn_params = buttonParams();
+      var btn_state = buttonState(btn_params);
+      if (curButtonState === btn_state) {
+        return;
+      }
+      curButtonState = btn_state;
+      WebView.postEvent('web_app_setup_back_button', false, btn_params);
+    }
+
+    function setParams(params) {
+      if (!buttonCheckVersion()) {
+        return backButton;
+      }
+      if (typeof params.is_visible !== 'undefined') {
+        isVisible = !!params.is_visible;
+      }
+      updateButton();
+      return backButton;
+    }
+
+    backButton.onClick = function(callback) {
+      if (buttonCheckVersion()) {
+        onWebViewEvent('backButtonClicked', callback);
+      }
+      return backButton;
+    };
+    backButton.offClick = function(callback) {
+      if (buttonCheckVersion()) {
+        offWebViewEvent('backButtonClicked', callback);
+      }
+      return backButton;
+    };
+    backButton.show = function() {
+      return setParams({is_visible: true});
+    };
+    backButton.hide = function() {
+      return setParams({is_visible: false});
+    };
+    return backButton;
+  })();
+
+  var debugBottomBar = null, debugBottomBarBtns = {}, bottomBarHeight = 0;
+  if (initParams.tgWebAppDebug) {
+    debugBottomBar = document.createElement('tg-bottom-bar');
+    var debugBottomBarStyle = {
+      display: 'flex',
+      gap: '7px',
+      font: '600 14px/18px sans-serif',
+      width: '100%',
+      background: getBottomBarColor(),
+      position: 'fixed',
+      left: '0',
+      right: '0',
+      bottom: '0',
+      margin: '0',
+      padding: '7px',
+      textAlign: 'center',
+      boxSizing: 'border-box',
+      zIndex: '10000'
+    };
+    for (var k in debugBottomBarStyle) {
+      debugBottomBar.style[k] = debugBottomBarStyle[k];
+    }
+    document.addEventListener('DOMContentLoaded', function onDomLoaded(event) {
+      document.removeEventListener('DOMContentLoaded', onDomLoaded);
+      document.body.appendChild(debugBottomBar);
+    });
+    var animStyle = document.createElement('style');
+    animStyle.innerHTML = 'tg-bottom-button.shine { position: relative; overflow: hidden; } tg-bottom-button.shine:before { content:""; position: absolute; top: 0; width: 100%; height: 100%; background: linear-gradient(120deg, transparent, rgba(255, 255, 255, .2), transparent); animation: tg-bottom-button-shine 5s ease-in-out infinite; } @-webkit-keyframes tg-bottom-button-shine { 0% {left: -100%;} 12%,100% {left: 100%}} @keyframes tg-bottom-button-shine { 0% {left: -100%;} 12%,100% {left: 100%}}';
+    debugBottomBar.appendChild(animStyle);
+  }
+  function updateDebugBottomBar() {
+    var mainBtn = debugBottomBarBtns.main._bottomButton;
+    var secondaryBtn = debugBottomBarBtns.secondary._bottomButton;
+    if (mainBtn.isVisible || secondaryBtn.isVisible) {
+      debugBottomBar.style.display = 'flex';
+      bottomBarHeight = 58;
+      if (mainBtn.isVisible && secondaryBtn.isVisible) {
+        if (secondaryBtn.position == 'top') {
+          debugBottomBar.style.flexDirection = 'column-reverse';
+          bottomBarHeight += 51;
+        } else if (secondaryBtn.position == 'bottom') {
+          debugBottomBar.style.flexDirection = 'column';
+          bottomBarHeight += 51;
+        } else if (secondaryBtn.position == 'left') {
+          debugBottomBar.style.flexDirection = 'row-reverse';
+        } else if (secondaryBtn.position == 'right') {
+          debugBottomBar.style.flexDirection = 'row';
+        }
+      }
+    } else {
+      debugBottomBar.style.display = 'none';
+      bottomBarHeight = 0;
+    }
+    debugBottomBar.style.background = getBottomBarColor();
+    if (document.documentElement) {
+      document.documentElement.style.boxSizing = 'border-box';
+      document.documentElement.style.paddingBottom = bottomBarHeight + 'px';
+    }
+    setViewportHeight();
+  }
+
+
+  var BottomButtonConstructor = function(type) {
+    var isMainButton = (type == 'main');
+    if (isMainButton) {
+      var setupFnName = 'web_app_setup_main_button';
+      var tgEventName = 'main_button_pressed';
+      var webViewEventName = 'mainButtonClicked';
+      var buttonTextDefault = 'Continue';
+      var buttonColorDefault = function(){ return themeParams.button_color || '#2481cc'; };
+      var buttonTextColorDefault = function(){ return themeParams.button_text_color || '#ffffff'; };
+    } else {
+      var setupFnName = 'web_app_setup_secondary_button';
+      var tgEventName = 'secondary_button_pressed';
+      var webViewEventName = 'secondaryButtonClicked';
+      var buttonTextDefault = 'Cancel';
+      var buttonColorDefault = function(){ return getBottomBarColor(); };
+      var buttonTextColorDefault = function(){ return themeParams.button_color || '#2481cc'; };
+    }
+
+    var isVisible = false;
+    var isActive = true;
+    var hasShineEffect = false;
+    var isProgressVisible = false;
+    var iconCustomEmojiId = false;
+    var buttonType = type;
+    var buttonText = buttonTextDefault;
+    var buttonColor = false;
+    var buttonTextColor = false;
+    var buttonPosition = 'left';
+
+    var bottomButton = {};
+    Object.defineProperty(bottomButton, 'type', {
+      get: function(){ return buttonType; },
+      enumerable: true
+    });
+    Object.defineProperty(bottomButton, 'iconCustomEmojiId', {
+      set: function(val){ bottomButton.setParams({icon_custom_emoji_id: val}); },
+      get: function(){ return iconCustomEmojiId; },
+      enumerable: true
+    });
+    Object.defineProperty(bottomButton, 'text', {
+      set: function(val){ bottomButton.setParams({text: val}); },
+      get: function(){ return buttonText; },
+      enumerable: true
+    });
+    Object.defineProperty(bottomButton, 'color', {
+      set: function(val){ bottomButton.setParams({color: val}); },
+      get: function(){ return buttonColor || buttonColorDefault(); },
+      enumerable: true
+    });
+    Object.defineProperty(bottomButton, 'textColor', {
+      set: function(val){ bottomButton.setParams({text_color: val}); },
+      get: function(){ return buttonTextColor || buttonTextColorDefault(); },
+      enumerable: true
+    });
+    Object.defineProperty(bottomButton, 'isVisible', {
+      set: function(val){ bottomButton.setParams({is_visible: val}); },
+      get: function(){ return isVisible; },
+      enumerable: true
+    });
+    Object.defineProperty(bottomButton, 'isProgressVisible', {
+      get: function(){ return isProgressVisible; },
+      enumerable: true
+    });
+    Object.defineProperty(bottomButton, 'isActive', {
+      set: function(val){ bottomButton.setParams({is_active: val}); },
+      get: function(){ return isActive; },
+      enumerable: true
+    });
+    Object.defineProperty(bottomButton, 'hasShineEffect', {
+      set: function(val){ bottomButton.setParams({has_shine_effect: val}); },
+      get: function(){ return hasShineEffect; },
+      enumerable: true
+    });
+    if (!isMainButton) {
+      Object.defineProperty(bottomButton, 'position', {
+        set: function(val){ bottomButton.setParams({position: val}); },
+        get: function(){ return buttonPosition; },
+        enumerable: true
+      });
+    }
+
+    var curButtonState = null;
+
+    WebView.onEvent(tgEventName, onBottomButtonPressed);
+
+    var debugBtn = null;
+    if (initParams.tgWebAppDebug) {
+      debugBtn = document.createElement('tg-bottom-button');
+      var debugBtnStyle = {
+        display: 'none',
+        width: '100%',
+        height: '44px',
+        borderRadius: '0',
+        background: 'no-repeat right center',
+        padding: '13px 15px',
+        textAlign: 'center',
+        boxSizing: 'border-box'
+      };
+      for (var k in debugBtnStyle) {
+        debugBtn.style[k] = debugBtnStyle[k];
+      }
+      debugBottomBar.appendChild(debugBtn);
+      debugBtn.addEventListener('click', onBottomButtonPressed, false);
+      debugBtn._bottomButton = bottomButton;
+      debugBottomBarBtns[type] = debugBtn;
+    }
+
+    function onBottomButtonPressed() {
+      if (isActive) {
+        receiveWebViewEvent(webViewEventName);
+      }
+    }
+
+    function buttonParams() {
+      var color = bottomButton.color;
+      var text_color = bottomButton.textColor;
+      if (isVisible) {
+        var params = {
+          is_visible: true,
+          is_active: isActive,
+          is_progress_visible: isProgressVisible,
+          icon_custom_emoji_id: iconCustomEmojiId,
+          text: buttonText,
+          color: color,
+          text_color: text_color,
+          has_shine_effect: hasShineEffect && isActive && !isProgressVisible
+        };
+        if (!isMainButton) {
+          params.position = buttonPosition;
+        }
+      } else {
+        var params = {
+          is_visible: false
+        };
+      }
+      return params;
+    }
+
+    function buttonState(btn_params) {
+      if (typeof btn_params === 'undefined') {
+        btn_params = buttonParams();
+      }
+      return JSON.stringify(btn_params);
+    }
+
+    function updateButton() {
+      var btn_params = buttonParams();
+      var btn_state = buttonState(btn_params);
+      if (curButtonState === btn_state) {
+        return;
+      }
+      curButtonState = btn_state;
+      WebView.postEvent(setupFnName, false, btn_params);
+      if (initParams.tgWebAppDebug) {
+        updateDebugButton(btn_params);
+      }
+    }
+
+    function updateDebugButton(btn_params) {
+      if (btn_params.is_visible) {
+        debugBtn.style.display = 'block';
+
+        debugBtn.style.opacity = btn_params.is_active ? '1' : '0.8';
+        debugBtn.style.cursor = btn_params.is_active ? 'pointer' : 'auto';
+        debugBtn.disabled = !btn_params.is_active;
+        debugBtn.innerText = btn_params.text;
+        debugBtn.className = btn_params.has_shine_effect ? 'shine' : '';
+        debugBtn.style.backgroundImage = btn_params.is_progress_visible ? "url('data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewport="0 0 48 48" width="48px" height="48px"><circle cx="50%" cy="50%" stroke="' + btn_params.text_color + '" stroke-width="2.25" stroke-linecap="round" fill="none" stroke-dashoffset="106" r="9" stroke-dasharray="56.52" rotate="-90"><animate attributeName="stroke-dashoffset" attributeType="XML" dur="360s" from="0" to="12500" repeatCount="indefinite"></animate><animateTransform attributeName="transform" attributeType="XML" type="rotate" dur="1s" from="-90 24 24" to="630 24 24" repeatCount="indefinite"></animateTransform></circle></svg>') + "')" : 'none';
+        debugBtn.style.backgroundColor = btn_params.color;
+        debugBtn.style.color = btn_params.text_color;
+      } else {
+        debugBtn.style.display = 'none';
+      }
+      updateDebugBottomBar();
+    }
+
+    function setParams(params) {
+      if (typeof params.icon_custom_emoji_id !== 'undefined') {
+        var emoji_id = params.icon_custom_emoji_id;
+        if (emoji_id === false || emoji_id === null) {
+          emoji_id = '';
+        }
+        if (emoji_id !== '' && !/^[0-9]{10,20}$/.test(emoji_id)) {
+          console.error('[Telegram.WebApp] Bottom button icon custom emoji is invalid', params.icon_custom_emoji_id);
+          throw Error('WebAppBottomButtonParamInvalid');
+        }
+        iconCustomEmojiId = emoji_id;
+      }
+      if (typeof params.text !== 'undefined') {
+        var text = strTrim(params.text);
+        if (!text.length && !iconCustomEmojiId) {
+          console.error('[Telegram.WebApp] Bottom button text is required', params.text);
+          throw Error('WebAppBottomButtonParamInvalid');
+        }
+        if (text.length > 64) {
+          console.error('[Telegram.WebApp] Bottom button text is too long', text);
+          throw Error('WebAppBottomButtonParamInvalid');
+        }
+        buttonText = text;
+      }
+      if (typeof params.color !== 'undefined') {
+        if (params.color === false ||
+            params.color === null) {
+          buttonColor = false;
+        } else {
+          var color = parseColorToHex(params.color);
+          if (!color) {
+            console.error('[Telegram.WebApp] Bottom button color format is invalid', params.color);
+            throw Error('WebAppBottomButtonParamInvalid');
+          }
+          buttonColor = color;
+        }
+      }
+      if (typeof params.text_color !== 'undefined') {
+        if (params.text_color === false ||
+            params.text_color === null) {
+          buttonTextColor = false;
+        } else {
+          var text_color = parseColorToHex(params.text_color);
+          if (!text_color) {
+            console.error('[Telegram.WebApp] Bottom button text color format is invalid', params.text_color);
+            throw Error('WebAppBottomButtonParamInvalid');
+          }
+          buttonTextColor = text_color;
+        }
+      }
+      if (typeof params.is_visible !== 'undefined') {
+        if (params.is_visible &&
+            !bottomButton.text.length) {
+          console.error('[Telegram.WebApp] Bottom button text is required');
+          throw Error('WebAppBottomButtonParamInvalid');
+        }
+        isVisible = !!params.is_visible;
+      }
+      if (typeof params.has_shine_effect !== 'undefined') {
+        hasShineEffect = !!params.has_shine_effect;
+      }
+      if (!isMainButton && typeof params.position !== 'undefined') {
+        if (params.position != 'left' && params.position != 'right' &&
+            params.position != 'top' && params.position != 'bottom') {
+          console.error('[Telegram.WebApp] Bottom button posiition is invalid', params.position);
+          throw Error('WebAppBottomButtonParamInvalid');
+        }
+        buttonPosition = params.position;
+      }
+      if (typeof params.is_active !== 'undefined') {
+        isActive = !!params.is_active;
+      }
+      updateButton();
+      return bottomButton;
+    }
+
+    bottomButton.setText = function(text) {
+      return bottomButton.setParams({text: text});
+    };
+    bottomButton.onClick = function(callback) {
+      onWebViewEvent(webViewEventName, callback);
+      return bottomButton;
+    };
+    bottomButton.offClick = function(callback) {
+      offWebViewEvent(webViewEventName, callback);
+      return bottomButton;
+    };
+    bottomButton.show = function() {
+      return bottomButton.setParams({is_visible: true});
+    };
+    bottomButton.hide = function() {
+      return bottomButton.setParams({is_visible: false});
+    };
+    bottomButton.enable = function() {
+      return bottomButton.setParams({is_active: true});
+    };
+    bottomButton.disable = function() {
+      return bottomButton.setParams({is_active: false});
+    };
+    bottomButton.showProgress = function(leaveActive) {
+      isActive = !!leaveActive;
+      isProgressVisible = true;
+      updateButton();
+      return bottomButton;
+    };
+    bottomButton.hideProgress = function() {
+      if (!bottomButton.isActive) {
+        isActive = true;
+      }
+      isProgressVisible = false;
+      updateButton();
+      return bottomButton;
+    }
+    bottomButton.setParams = setParams;
+    return bottomButton;
+  };
+  var MainButton = BottomButtonConstructor('main');
+  var SecondaryButton = BottomButtonConstructor('secondary');
+
+  var SettingsButton = (function() {
+    var isVisible = false;
+
+    var settingsButton = {};
+    Object.defineProperty(settingsButton, 'isVisible', {
+      set: function(val){ setParams({is_visible: val}); },
+      get: function(){ return isVisible; },
+      enumerable: true
+    });
+
+    var curButtonState = null;
+
+    WebView.onEvent('settings_button_pressed', onSettingsButtonPressed);
+
+    function onSettingsButtonPressed() {
+      receiveWebViewEvent('settingsButtonClicked');
+    }
+
+    function buttonParams() {
+      return {is_visible: isVisible};
+    }
+
+    function buttonState(btn_params) {
+      if (typeof btn_params === 'undefined') {
+        btn_params = buttonParams();
+      }
+      return JSON.stringify(btn_params);
+    }
+
+    function buttonCheckVersion() {
+      if (!versionAtLeast('6.10')) {
+        console.warn('[Telegram.WebApp] SettingsButton is not supported in version ' + webAppVersion);
+        return false;
+      }
+      return true;
+    }
+
+    function updateButton() {
+      var btn_params = buttonParams();
+      var btn_state = buttonState(btn_params);
+      if (curButtonState === btn_state) {
+        return;
+      }
+      curButtonState = btn_state;
+      WebView.postEvent('web_app_setup_settings_button', false, btn_params);
+    }
+
+    function setParams(params) {
+      if (!buttonCheckVersion()) {
+        return settingsButton;
+      }
+      if (typeof params.is_visible !== 'undefined') {
+        isVisible = !!params.is_visible;
+      }
+      updateButton();
+      return settingsButton;
+    }
+
+    settingsButton.onClick = function(callback) {
+      if (buttonCheckVersion()) {
+        onWebViewEvent('settingsButtonClicked', callback);
+      }
+      return settingsButton;
+    };
+    settingsButton.offClick = function(callback) {
+      if (buttonCheckVersion()) {
+        offWebViewEvent('settingsButtonClicked', callback);
+      }
+      return settingsButton;
+    };
+    settingsButton.show = function() {
+      return setParams({is_visible: true});
+    };
+    settingsButton.hide = function() {
+      return setParams({is_visible: false});
+    };
+    return settingsButton;
+  })();
+
+  var HapticFeedback = (function() {
+    var hapticFeedback = {};
+
+    function triggerFeedback(params) {
+      if (!versionAtLeast('6.1')) {
+        console.warn('[Telegram.WebApp] HapticFeedback is not supported in version ' + webAppVersion);
+        return hapticFeedback;
+      }
+      if (params.type == 'impact') {
+        if (params.impact_style != 'light' &&
+            params.impact_style != 'medium' &&
+            params.impact_style != 'heavy' &&
+            params.impact_style != 'rigid' &&
+            params.impact_style != 'soft') {
+          console.error('[Telegram.WebApp] Haptic impact style is invalid', params.impact_style);
+          throw Error('WebAppHapticImpactStyleInvalid');
+        }
+      } else if (params.type == 'notification') {
+        if (params.notification_type != 'error' &&
+            params.notification_type != 'success' &&
+            params.notification_type != 'warning') {
+          console.error('[Telegram.WebApp] Haptic notification type is invalid', params.notification_type);
+          throw Error('WebAppHapticNotificationTypeInvalid');
+        }
+      } else if (params.type == 'selection_change') {
+        // no params needed
+      } else {
+        console.error('[Telegram.WebApp] Haptic feedback type is invalid', params.type);
+        throw Error('WebAppHapticFeedbackTypeInvalid');
+      }
+      WebView.postEvent('web_app_trigger_haptic_feedback', false, params);
+      return hapticFeedback;
+    }
+
+    hapticFeedback.impactOccurred = function(style) {
+      return triggerFeedback({type: 'impact', impact_style: style});
+    };
+    hapticFeedback.notificationOccurred = function(type) {
+      return triggerFeedback({type: 'notification', notification_type: type});
+    };
+    hapticFeedback.selectionChanged = function() {
+      return triggerFeedback({type: 'selection_change'});
+    };
+    return hapticFeedback;
+  })();
+
+  var CloudStorage = (function() {
+    var cloudStorage = {};
+
+    function invokeStorageMethod(method, params, callback) {
+      if (!versionAtLeast('6.9')) {
+        console.error('[Telegram.WebApp] CloudStorage is not supported in version ' + webAppVersion);
+        throw Error('WebAppMethodUnsupported');
+      }
+      invokeCustomMethod(method, params, callback);
+      return cloudStorage;
+    }
+
+    cloudStorage.setItem = function(key, value, callback) {
+      return invokeStorageMethod('saveStorageValue', {key: key, value: value}, callback);
+    };
+    cloudStorage.getItem = function(key, callback) {
+      return cloudStorage.getItems([key], callback ? function(err, res) {
+        if (err) callback(err);
+        else callback(null, res[key]);
+      } : null);
+    };
+    cloudStorage.getItems = function(keys, callback) {
+      return invokeStorageMethod('getStorageValues', {keys: keys}, callback);
+    };
+    cloudStorage.removeItem = function(key, callback) {
+      return cloudStorage.removeItems([key], callback);
+    };
+    cloudStorage.removeItems = function(keys, callback) {
+      return invokeStorageMethod('deleteStorageValues', {keys: keys}, callback);
+    };
+    cloudStorage.getKeys = function(callback) {
+      return invokeStorageMethod('getStorageKeys', {}, callback);
+    };
+    return cloudStorage;
+  })();
+
+  var DeviceStorage = (function() {
+    var deviceStorage = {};
+
+    WebView.onEvent('device_storage_key_saved',  onDeviceStorageEvent);
+    WebView.onEvent('device_storage_key_received', onDeviceStorageEvent);
+    WebView.onEvent('device_storage_cleared',  onDeviceStorageEvent);
+    WebView.onEvent('device_storage_failed',  onDeviceStorageEvent);
+
+    function onDeviceStorageEvent(eventType, eventData) {
+      if (eventData.req_id && webAppCallbacks[eventData.req_id]) {
+        var requestData = webAppCallbacks[eventData.req_id];
+        delete webAppCallbacks[eventData.req_id];
+        var res = null, err = null;
+        if (eventType == 'device_storage_failed') {
+          err = eventData.error || 'UNKNOWN_ERROR';
+        } else if (eventType == 'device_storage_key_received') {
+          res = eventData.value;
+        } else {
+          res = true;
+        }
+        if (requestData.callback) {
+          requestData.callback(err, res);
+        }
+      }
+    }
+
+    function invokeStorageMethod(method, params, callback) {
+      if (!versionAtLeast('9.0')) {
+        console.error('[Telegram.WebApp] DeviceStorage is not supported in version ' + webAppVersion);
+        throw Error('WebAppMethodUnsupported');
+      }
+      var req_id = generateCallbackId(16);
+      var req_params = {req_id: req_id};
+      for (var k in params) {
+        req_params[k] = params[k];
+      }
+      webAppCallbacks[req_id] = {
+        callback: callback
+      };
+      WebView.postEvent(method, false, req_params);
+      return deviceStorage;
+    }
+
+    deviceStorage.setItem = function(key, value, callback) {
+      return invokeStorageMethod('web_app_device_storage_save_key', {key: key, value: value}, callback);
+    };
+    deviceStorage.getItem = function(key, callback) {
+      return invokeStorageMethod('web_app_device_storage_get_key', {key: key}, callback);
+    };
+    deviceStorage.removeItem = function(key, callback) {
+      return invokeStorageMethod('web_app_device_storage_save_key', {key: key, value: null}, callback);
+    };
+    deviceStorage.clear = function(callback) {
+      return invokeStorageMethod('web_app_device_storage_clear', {}, callback);
+    };
+    return deviceStorage;
+  })();
+
+  var SecureStorage = (function() {
+    var secureStorage = {};
+
+    WebView.onEvent('secure_storage_key_saved',  onSecureStorageEvent);
+    WebView.onEvent('secure_storage_key_received', onSecureStorageEvent);
+    WebView.onEvent('secure_storage_key_restored', onSecureStorageEvent);
+    WebView.onEvent('secure_storage_cleared',  onSecureStorageEvent);
+    WebView.onEvent('secure_storage_failed',  onSecureStorageEvent);
+
+    function onSecureStorageEvent(eventType, eventData) {
+      if (eventData.req_id && webAppCallbacks[eventData.req_id]) {
+        var requestData = webAppCallbacks[eventData.req_id];
+        delete webAppCallbacks[eventData.req_id];
+        var res = null, err = null, can_restore = null;
+        if (eventType == 'secure_storage_failed') {
+          err = eventData.error || 'UNKNOWN_ERROR';
+        } else if (eventType == 'secure_storage_key_received') {
+          res = eventData.value;
+          if (eventData.can_restore) {
+            can_restore = true;
+          }
+        } else if (eventType == 'secure_storage_key_restored') {
+          res = eventData.value;
+        } else {
+          res = true;
+        }
+        if (requestData.callback) {
+          requestData.callback(err, res, can_restore);
+        }
+      }
+    }
+
+    function invokeStorageMethod(method, params, callback) {
+      if (!versionAtLeast('9.0')) {
+        console.error('[Telegram.WebApp] SecureStorage is not supported in version ' + webAppVersion);
+        throw Error('WebAppMethodUnsupported');
+      }
+      var req_id = generateCallbackId(16);
+      var req_params = {req_id: req_id};
+      for (var k in params) {
+        req_params[k] = params[k];
+      }
+      webAppCallbacks[req_id] = {
+        callback: callback
+      };
+      WebView.postEvent(method, false, req_params);
+      return secureStorage;
+    }
+
+    secureStorage.setItem = function(key, value, callback) {
+      return invokeStorageMethod('web_app_secure_storage_save_key', {key: key, value: value}, callback);
+    };
+    secureStorage.getItem = function(key, callback) {
+      return invokeStorageMethod('web_app_secure_storage_get_key', {key: key}, callback);
+    };
+    secureStorage.restoreItem = function(key, callback) {
+      return invokeStorageMethod('web_app_secure_storage_restore_key', {key: key}, callback);
+    };
+    secureStorage.removeItem = function(key, callback) {
+      return invokeStorageMethod('web_app_secure_storage_save_key', {key: key, value: null}, callback);
+    };
+    secureStorage.clear = function(callback) {
+      return invokeStorageMethod('web_app_secure_storage_clear', {}, callback);
+    };
+    return secureStorage;
+  })();
+
+  var BiometricManager = (function() {
+    var isInited = false;
+    var isBiometricAvailable = false;
+    var biometricType = 'unknown';
+    var isAccessRequested = false;
+    var isAccessGranted = false;
+    var isBiometricTokenSaved = false;
+    var deviceId = '';
+
+    var biometricManager = {};
+    Object.defineProperty(biometricManager, 'isInited', {
+      get: function(){ return isInited; },
+      enumerable: true
+    });
+    Object.defineProperty(biometricManager, 'isBiometricAvailable', {
+      get: function(){ return isInited && isBiometricAvailable; },
+      enumerable: true
+    });
+    Object.defineProperty(biometricManager, 'biometricType', {
+      get: function(){ return biometricType || 'unknown'; },
+      enumerable: true
+    });
+    Object.defineProperty(biometricManager, 'isAccessRequested', {
+      get: function(){ return isAccessRequested; },
+      enumerable: true
+    });
+    Object.defineProperty(biometricManager, 'isAccessGranted', {
+      get: function(){ return isAccessRequested && isAccessGranted; },
+      enumerable: true
+    });
+    Object.defineProperty(biometricManager, 'isBiometricTokenSaved', {
+      get: function(){ return isBiometricTokenSaved; },
+      enumerable: true
+    });
+    Object.defineProperty(biometricManager, 'deviceId', {
+      get: function(){ return deviceId || ''; },
+      enumerable: true
+    });
+
+    var initRequestState = {callbacks: []};
+    var accessRequestState = false;
+    var authRequestState = false;
+    var tokenRequestState = false;
+
+    WebView.onEvent('biometry_info_received',  onBiometryInfoReceived);
+    WebView.onEvent('biometry_auth_requested', onBiometryAuthRequested);
+    WebView.onEvent('biometry_token_updated',  onBiometryTokenUpdated);
+
+    function onBiometryInfoReceived(eventType, eventData) {
+      isInited = true;
+      if (eventData.available) {
+        isBiometricAvailable = true;
+        biometricType = eventData.type || 'unknown';
+        if (eventData.access_requested) {
+          isAccessRequested = true;
+          isAccessGranted = !!eventData.access_granted;
+          isBiometricTokenSaved = !!eventData.token_saved;
+        } else {
+          isAccessRequested = false;
+          isAccessGranted = false;
+          isBiometricTokenSaved = false;
+        }
+      } else {
+        isBiometricAvailable = false;
+        biometricType = 'unknown';
+        isAccessRequested = false;
+        isAccessGranted = false;
+        isBiometricTokenSaved = false;
+      }
+      deviceId = eventData.device_id || '';
+
+      if (initRequestState.callbacks.length > 0) {
+        for (var i = 0; i < initRequestState.callbacks.length; i++) {
+          var callback = initRequestState.callbacks[i];
+          callback();
+        }
+        initRequestState.callbacks = [];
+      }
+      if (accessRequestState) {
+        var state = accessRequestState;
+        accessRequestState = false;
+        if (state.callback) {
+          state.callback(isAccessGranted);
+        }
+      }
+      receiveWebViewEvent('biometricManagerUpdated');
+    }
+    function onBiometryAuthRequested(eventType, eventData) {
+      var isAuthenticated = (eventData.status == 'authorized'),
+          biometricToken = eventData.token || '';
+      if (authRequestState) {
+        var state = authRequestState;
+        authRequestState = false;
+        if (state.callback) {
+          state.callback(isAuthenticated, isAuthenticated ? biometricToken : null);
+        }
+      }
+      receiveWebViewEvent('biometricAuthRequested', isAuthenticated ? {
+        isAuthenticated: true,
+        biometricToken: biometricToken
+      } : {
+        isAuthenticated: false
+      });
+    }
+    function onBiometryTokenUpdated(eventType, eventData) {
+      var applied = false;
+      if (isBiometricAvailable &&
+          isAccessRequested) {
+        if (eventData.status == 'updated') {
+          isBiometricTokenSaved = true;
+          applied = true;
+        }
+        else if (eventData.status == 'removed') {
+          isBiometricTokenSaved = false;
+          applied = true;
+        }
+      }
+      if (tokenRequestState) {
+        var state = tokenRequestState;
+        tokenRequestState = false;
+        if (state.callback) {
+          state.callback(applied);
+        }
+      }
+      receiveWebViewEvent('biometricTokenUpdated', {
+        isUpdated: applied
+      });
+    }
+
+    function checkVersion() {
+      if (!versionAtLeast('7.2')) {
+        console.warn('[Telegram.WebApp] BiometricManager is not supported in version ' + webAppVersion);
+        return false;
+      }
+      return true;
+    }
+
+    function checkInit() {
+      if (!isInited) {
+        console.error('[Telegram.WebApp] BiometricManager should be inited before using.');
+        throw Error('WebAppBiometricManagerNotInited');
+      }
+      return true;
+    }
+
+    biometricManager.init = function(callback) {
+      if (!checkVersion()) {
+        return biometricManager;
+      }
+      if (isInited) {
+        return biometricManager;
+      }
+      if (callback) {
+        initRequestState.callbacks.push(callback);
+      }
+      WebView.postEvent('web_app_biometry_get_info', false);
+      return biometricManager;
+    };
+    biometricManager.requestAccess = function(params, callback) {
+      if (!checkVersion()) {
+        return biometricManager;
+      }
+      checkInit();
+      if (!isBiometricAvailable) {
+        console.error('[Telegram.WebApp] Biometrics is not available on this device.');
+        throw Error('WebAppBiometricManagerBiometricsNotAvailable');
+      }
+      if (accessRequestState) {
+        console.error('[Telegram.WebApp] Access is already requested');
+        throw Error('WebAppBiometricManagerAccessRequested');
+      }
+      var popup_params = {};
+      if (typeof params.reason !== 'undefined') {
+        var reason = strTrim(params.reason);
+        if (reason.length > 128) {
+          console.error('[Telegram.WebApp] Biometric reason is too long', reason);
+          throw Error('WebAppBiometricRequestAccessParamInvalid');
+        }
+        if (reason.length > 0) {
+          popup_params.reason = reason;
+        }
+      }
+
+      accessRequestState = {
+        callback: callback
+      };
+      WebView.postEvent('web_app_biometry_request_access', false, popup_params);
+      return biometricManager;
+    };
+    biometricManager.authenticate = function(params, callback) {
+      if (!checkVersion()) {
+        return biometricManager;
+      }
+      checkInit();
+      if (!isBiometricAvailable) {
+        console.error('[Telegram.WebApp] Biometrics is not available on this device.');
+        throw Error('WebAppBiometricManagerBiometricsNotAvailable');
+      }
+      if (!isAccessGranted) {
+        console.error('[Telegram.WebApp] Biometric access was not granted by the user.');
+        throw Error('WebAppBiometricManagerBiometricAccessNotGranted');
+      }
+      if (authRequestState) {
+        console.error('[Telegram.WebApp] Authentication request is already in progress.');
+        throw Error('WebAppBiometricManagerAuthenticationRequested');
+      }
+      var popup_params = {};
+      if (typeof params.reason !== 'undefined') {
+        var reason = strTrim(params.reason);
+        if (reason.length > 128) {
+          console.error('[Telegram.WebApp] Biometric reason is too long', reason);
+          throw Error('WebAppBiometricRequestAccessParamInvalid');
+        }
+        if (reason.length > 0) {
+          popup_params.reason = reason;
+        }
+      }
+
+      authRequestState = {
+        callback: callback
+      };
+      WebView.postEvent('web_app_biometry_request_auth', false, popup_params);
+      return biometricManager;
+    };
+    biometricManager.updateBiometricToken = function(token, callback) {
+      if (!checkVersion()) {
+        return biometricManager;
+      }
+      token = token || '';
+      if (token.length > 1024) {
+        console.error('[Telegram.WebApp] Token is too long', token);
+        throw Error('WebAppBiometricManagerTokenInvalid');
+      }
+      checkInit();
+      if (!isBiometricAvailable) {
+        console.error('[Telegram.WebApp] Biometrics is not available on this device.');
+        throw Error('WebAppBiometricManagerBiometricsNotAvailable');
+      }
+      if (!isAccessGranted) {
+        console.error('[Telegram.WebApp] Biometric access was not granted by the user.');
+        throw Error('WebAppBiometricManagerBiometricAccessNotGranted');
+      }
+      if (tokenRequestState) {
+        console.error('[Telegram.WebApp] Token request is already in progress.');
+        throw Error('WebAppBiometricManagerTokenUpdateRequested');
+      }
+      tokenRequestState = {
+        callback: callback
+      };
+      WebView.postEvent('web_app_biometry_update_token', false, {token: token});
+      return biometricManager;
+    };
+    biometricManager.openSettings = function() {
+      if (!checkVersion()) {
+        return biometricManager;
+      }
+      checkInit();
+      if (!isBiometricAvailable) {
+        console.error('[Telegram.WebApp] Biometrics is not available on this device.');
+        throw Error('WebAppBiometricManagerBiometricsNotAvailable');
+      }
+      if (!isAccessRequested) {
+        console.error('[Telegram.WebApp] Biometric access was not requested yet.');
+        throw Error('WebAppBiometricManagerBiometricsAccessNotRequested');
+      }
+      if (isAccessGranted) {
+        console.warn('[Telegram.WebApp] Biometric access was granted by the user, no need to go to settings.');
+        return biometricManager;
+      }
+      WebView.postEvent('web_app_biometry_open_settings', false);
+      return biometricManager;
+    };
+    return biometricManager;
+  })();
+
+  var LocationManager = (function() {
+    var isInited = false;
+    var isLocationAvailable = false;
+    var isAccessRequested = false;
+    var isAccessGranted = false;
+
+    var locationManager = {};
+    Object.defineProperty(locationManager, 'isInited', {
+      get: function(){ return isInited; },
+      enumerable: true
+    });
+    Object.defineProperty(locationManager, 'isLocationAvailable', {
+      get: function(){ return isInited && isLocationAvailable; },
+      enumerable: true
+    });
+    Object.defineProperty(locationManager, 'isAccessRequested', {
+      get: function(){ return isAccessRequested; },
+      enumerable: true
+    });
+    Object.defineProperty(locationManager, 'isAccessGranted', {
+      get: function(){ return isAccessRequested && isAccessGranted; },
+      enumerable: true
+    });
+
+    var initRequestState = {callbacks: []};
+    var getRequestState = {callbacks: []};
+
+    WebView.onEvent('location_checked',  onLocationChecked);
+    WebView.onEvent('location_requested', onLocationRequested);
+
+    function onLocationChecked(eventType, eventData) {
+      isInited = true;
+      if (eventData.available) {
+        isLocationAvailable = true;
+        if (eventData.access_requested) {
+          isAccessRequested = true;
+          isAccessGranted = !!eventData.access_granted;
+        } else {
+          isAccessRequested = false;
+          isAccessGranted = false;
+        }
+      } else {
+        isLocationAvailable = false;
+        isAccessRequested = false;
+        isAccessGranted = false;
+      }
+
+      if (initRequestState.callbacks.length > 0) {
+        for (var i = 0; i < initRequestState.callbacks.length; i++) {
+          var callback = initRequestState.callbacks[i];
+          callback();
+        }
+        initRequestState.callbacks = [];
+      }
+      receiveWebViewEvent('locationManagerUpdated');
+    }
+    function onLocationRequested(eventType, eventData) {
+      if (!eventData.available) {
+        locationData = null;
+      } else {
+        var locationData = {
+          latitude: eventData.latitude,
+          longitude: eventData.longitude,
+          altitude: null,
+          course: null,
+          speed: null,
+          horizontal_accuracy: null,
+          vertical_accuracy: null,
+          course_accuracy: null,
+          speed_accuracy: null,
+        };
+        if (typeof eventData.altitude !== 'undefined' && eventData.altitude !== null) {
+          locationData.altitude = eventData.altitude;
+        }
+        if (typeof eventData.course !== 'undefined' && eventData.course !== null) {
+          locationData.course = eventData.course % 360;
+        }
+        if (typeof eventData.speed !== 'undefined' && eventData.speed !== null) {
+          locationData.speed = eventData.speed;
+        }
+        if (typeof eventData.horizontal_accuracy !== 'undefined' && eventData.horizontal_accuracy !== null) {
+          locationData.horizontal_accuracy = eventData.horizontal_accuracy;
+        }
+        if (typeof eventData.vertical_accuracy !== 'undefined' && eventData.vertical_accuracy !== null) {
+          locationData.vertical_accuracy = eventData.vertical_accuracy;
+        }
+        if (typeof eventData.course_accuracy !== 'undefined' && eventData.course_accuracy !== null) {
+          locationData.course_accuracy = eventData.course_accuracy;
+        }
+        if (typeof eventData.speed_accuracy !== 'undefined' && eventData.speed_accuracy !== null) {
+          locationData.speed_accuracy = eventData.speed_accuracy;
+        }
+      }
+      if (!eventData.available ||
+          !isLocationAvailable ||
+          !isAccessRequested ||
+          !isAccessGranted) {
+        initRequestState.callbacks.push(function() {
+          locationResponse(locationData);
+        });
+        WebView.postEvent('web_app_check_location', false);
+      } else {
+        locationResponse(locationData);
+      }
+    }
+    function locationResponse(response) {
+      if (getRequestState.callbacks.length > 0) {
+        for (var i = 0; i < getRequestState.callbacks.length; i++) {
+          var callback = getRequestState.callbacks[i];
+          callback(response);
+        }
+        getRequestState.callbacks = [];
+      }
+      if (response !== null) {
+        receiveWebViewEvent('locationRequested', {
+          locationData: response
+        });
+      }
+    }
+
+    function checkVersion() {
+      if (!versionAtLeast('8.0')) {
+        console.warn('[Telegram.WebApp] LocationManager is not supported in version ' + webAppVersion);
+        return false;
+      }
+      return true;
+    }
+
+    function checkInit() {
+      if (!isInited) {
+        console.error('[Telegram.WebApp] LocationManager should be inited before using.');
+        throw Error('WebAppLocationManagerNotInited');
+      }
+      return true;
+    }
+
+    locationManager.init = function(callback) {
+      if (!checkVersion()) {
+        return locationManager;
+      }
+      if (isInited) {
+        return locationManager;
+      }
+      if (callback) {
+        initRequestState.callbacks.push(callback);
+      }
+      WebView.postEvent('web_app_check_location', false);
+      return locationManager;
+    };
+    locationManager.getLocation = function(callback) {
+      if (!checkVersion()) {
+        return locationManager;
+      }
+      checkInit();
+      if (!isLocationAvailable) {
+        console.error('[Telegram.WebApp] Location is not available on this device.');
+        throw Error('WebAppLocationManagerLocationNotAvailable');
+      }
+
+      getRequestState.callbacks.push(callback);
+      WebView.postEvent('web_app_request_location');
+      return locationManager;
+    };
+    locationManager.openSettings = function() {
+      if (!checkVersion()) {
+        return locationManager;
+      }
+      checkInit();
+      if (!isLocationAvailable) {
+        console.error('[Telegram.WebApp] Location is not available on this device.');
+        throw Error('WebAppLocationManagerLocationNotAvailable');
+      }
+      if (!isAccessRequested) {
+        console.error('[Telegram.WebApp] Location access was not requested yet.');
+        throw Error('WebAppLocationManagerLocationAccessNotRequested');
+      }
+      if (isAccessGranted) {
+        console.warn('[Telegram.WebApp] Location access was granted by the user, no need to go to settings.');
+        return locationManager;
+      }
+      WebView.postEvent('web_app_open_location_settings', false);
+      return locationManager;
+    };
+    return locationManager;
+  })();
+
+  var Accelerometer = (function() {
+    var isStarted = false;
+    var valueX = null, valueY = null, valueZ = null;
+    var startCallbacks = [], stopCallbacks = [];
+
+    var accelerometer = {};
+    Object.defineProperty(accelerometer, 'isStarted', {
+      get: function(){ return isStarted; },
+      enumerable: true
+    });
+    Object.defineProperty(accelerometer, 'x', {
+      get: function(){ return valueX; },
+      enumerable: true
+    });
+    Object.defineProperty(accelerometer, 'y', {
+      get: function(){ return valueY; },
+      enumerable: true
+    });
+    Object.defineProperty(accelerometer, 'z', {
+      get: function(){ return valueZ; },
+      enumerable: true
+    });
+
+    WebView.onEvent('accelerometer_started', onAccelerometerStarted);
+    WebView.onEvent('accelerometer_stopped', onAccelerometerStopped);
+    WebView.onEvent('accelerometer_changed', onAccelerometerChanged);
+    WebView.onEvent('accelerometer_failed',  onAccelerometerFailed);
+
+    function onAccelerometerStarted(eventType, eventData) {
+      isStarted = true;
+      if (startCallbacks.length > 0) {
+        for (var i = 0; i < startCallbacks.length; i++) {
+          var callback = startCallbacks[i];
+          callback(true);
+        }
+        startCallbacks = [];
+      }
+      receiveWebViewEvent('accelerometerStarted');
+    }
+    function onAccelerometerStopped(eventType, eventData) {
+      isStarted = false;
+      if (stopCallbacks.length > 0) {
+        for (var i = 0; i < stopCallbacks.length; i++) {
+          var callback = stopCallbacks[i];
+          callback(true);
+        }
+        stopCallbacks = [];
+      }
+      receiveWebViewEvent('accelerometerStopped');
+    }
+    function onAccelerometerChanged(eventType, eventData) {
+      valueX = eventData.x;
+      valueY = eventData.y;
+      valueZ = eventData.z;
+      receiveWebViewEvent('accelerometerChanged');
+    }
+    function onAccelerometerFailed(eventType, eventData) {
+      if (startCallbacks.length > 0) {
+        for (var i = 0; i < startCallbacks.length; i++) {
+          var callback = startCallbacks[i];
+          callback(false);
+        }
+        startCallbacks = [];
+      }
+      receiveWebViewEvent('accelerometerFailed', {
+        error: eventData.error
+      });
+    }
+
+    function checkVersion() {
+      if (!versionAtLeast('8.0')) {
+        console.warn('[Telegram.WebApp] Accelerometer is not supported in version ' + webAppVersion);
+        return false;
+      }
+      return true;
+    }
+
+    accelerometer.start = function(params, callback) {
+      params = params || {};
+      if (!checkVersion()) {
+        return accelerometer;
+      }
+      var req_params = {};
+      var refresh_rate = parseInt(params.refresh_rate || 1000);
+      if (isNaN(refresh_rate) || refresh_rate < 20 || refresh_rate > 1000) {
+        console.warn('[Telegram.WebApp] Accelerometer refresh_rate is invalid', refresh_rate);
+      } else {
+        req_params.refresh_rate = refresh_rate;
+      }
+
+      if (callback) {
+        startCallbacks.push(callback);
+      }
+      WebView.postEvent('web_app_start_accelerometer', false, req_params);
+      return accelerometer;
+    };
+    accelerometer.stop = function(callback) {
+      if (!checkVersion()) {
+        return accelerometer;
+      }
+      if (callback) {
+        stopCallbacks.push(callback);
+      }
+      WebView.postEvent('web_app_stop_accelerometer');
+      return accelerometer;
+    };
+    return accelerometer;
+  })();
+
+  var DeviceOrientation = (function() {
+    var isStarted = false;
+    var valueAlpha = null, valueBeta = null, valueGamma = null, valueAbsolute = false;
+    var startCallbacks = [], stopCallbacks = [];
+
+    var deviceOrientation = {};
+    Object.defineProperty(deviceOrientation, 'isStarted', {
+      get: function(){ return isStarted; },
+      enumerable: true
+    });
+    Object.defineProperty(deviceOrientation, 'absolute', {
+      get: function(){ return valueAbsolute; },
+      enumerable: true
+    });
+    Object.defineProperty(deviceOrientation, 'alpha', {
+      get: function(){ return valueAlpha; },
+      enumerable: true
+    });
+    Object.defineProperty(deviceOrientation, 'beta', {
+      get: function(){ return valueBeta; },
+      enumerable: true
+    });
+    Object.defineProperty(deviceOrientation, 'gamma', {
+      get: function(){ return valueGamma; },
+      enumerable: true
+    });
+
+    WebView.onEvent('device_orientation_started',  onDeviceOrientationStarted);
+    WebView.onEvent('device_orientation_stopped',  onDeviceOrientationStopped);
+    WebView.onEvent('device_orientation_changed', onDeviceOrientationChanged);
+    WebView.onEvent('device_orientation_failed',  onDeviceOrientationFailed);
+
+    function onDeviceOrientationStarted(eventType, eventData) {
+      isStarted = true;
+      if (startCallbacks.length > 0) {
+        for (var i = 0; i < startCallbacks.length; i++) {
+          var callback = startCallbacks[i];
+          callback(true);
+        }
+        startCallbacks = [];
+      }
+      receiveWebViewEvent('deviceOrientationStarted');
+    }
+    function onDeviceOrientationStopped(eventType, eventData) {
+      isStarted = false;
+      if (stopCallbacks.length > 0) {
+        for (var i = 0; i < stopCallbacks.length; i++) {
+          var callback = stopCallbacks[i];
+          callback(true);
+        }
+        stopCallbacks = [];
+      }
+      receiveWebViewEvent('deviceOrientationStopped');
+    }
+    function onDeviceOrientationChanged(eventType, eventData) {
+      valueAbsolute = !!eventData.absolute;
+      valueAlpha = eventData.alpha;
+      valueBeta  = eventData.beta;
+      valueGamma = eventData.gamma;
+      receiveWebViewEvent('deviceOrientationChanged');
+    }
+    function onDeviceOrientationFailed(eventType, eventData) {
+      if (startCallbacks.length > 0) {
+        for (var i = 0; i < startCallbacks.length; i++) {
+          var callback = startCallbacks[i];
+          callback(false);
+        }
+        startCallbacks = [];
+      }
+      receiveWebViewEvent('deviceOrientationFailed', {
+        error: eventData.error
+      });
+    }
+
+    function checkVersion() {
+      if (!versionAtLeast('8.0')) {
+        console.warn('[Telegram.WebApp] DeviceOrientation is not supported in version ' + webAppVersion);
+        return false;
+      }
+      return true;
+    }
+
+    deviceOrientation.start = function(params, callback) {
+      params = params || {};
+      if (!checkVersion()) {
+        return deviceOrientation;
+      }
+      var req_params = {};
+      var refresh_rate = parseInt(params.refresh_rate || 1000);
+      if (isNaN(refresh_rate) || refresh_rate < 20 || refresh_rate > 1000) {
+        console.warn('[Telegram.WebApp] DeviceOrientation refresh_rate is invalid', refresh_rate);
+      } else {
+        req_params.refresh_rate = refresh_rate;
+      }
+      req_params.need_absolute = !!params.need_absolute;
+
+      if (callback) {
+        startCallbacks.push(callback);
+      }
+      WebView.postEvent('web_app_start_device_orientation', false, req_params);
+      return deviceOrientation;
+    };
+    deviceOrientation.stop = function(callback) {
+      if (!checkVersion()) {
+        return deviceOrientation;
+      }
+      if (callback) {
+        stopCallbacks.push(callback);
+      }
+      WebView.postEvent('web_app_stop_device_orientation');
+      return deviceOrientation;
+    };
+    return deviceOrientation;
+  })();
+
+  var Gyroscope = (function() {
+    var isStarted = false;
+    var valueX = null, valueY = null, valueZ = null;
+    var startCallbacks = [], stopCallbacks = [];
+
+    var gyroscope = {};
+    Object.defineProperty(gyroscope, 'isStarted', {
+      get: function(){ return isStarted; },
+      enumerable: true
+    });
+    Object.defineProperty(gyroscope, 'x', {
+      get: function(){ return valueX; },
+      enumerable: true
+    });
+    Object.defineProperty(gyroscope, 'y', {
+      get: function(){ return valueY; },
+      enumerable: true
+    });
+    Object.defineProperty(gyroscope, 'z', {
+      get: function(){ return valueZ; },
+      enumerable: true
+    });
+
+    WebView.onEvent('gyroscope_started',  onGyroscopeStarted);
+    WebView.onEvent('gyroscope_stopped',  onGyroscopeStopped);
+    WebView.onEvent('gyroscope_changed', onGyroscopeChanged);
+    WebView.onEvent('gyroscope_failed',  onGyroscopeFailed);
+
+    function onGyroscopeStarted(eventType, eventData) {
+      isStarted = true;
+      if (startCallbacks.length > 0) {
+        for (var i = 0; i < startCallbacks.length; i++) {
+          var callback = startCallbacks[i];
+          callback(true);
+        }
+        startCallbacks = [];
+      }
+      receiveWebViewEvent('gyroscopeStarted');
+    }
+    function onGyroscopeStopped(eventType, eventData) {
+      isStarted = false;
+      if (stopCallbacks.length > 0) {
+        for (var i = 0; i < stopCallbacks.length; i++) {
+          var callback = stopCallbacks[i];
+          callback(true);
+        }
+        stopCallbacks = [];
+      }
+      receiveWebViewEvent('gyroscopeStopped');
+    }
+    function onGyroscopeChanged(eventType, eventData) {
+      valueX = eventData.x;
+      valueY = eventData.y;
+      valueZ = eventData.z;
+      receiveWebViewEvent('gyroscopeChanged');
+    }
+    function onGyroscopeFailed(eventType, eventData) {
+      if (startCallbacks.length > 0) {
+        for (var i = 0; i < startCallbacks.length; i++) {
+          var callback = startCallbacks[i];
+          callback(false);
+        }
+        startCallbacks = [];
+      }
+      receiveWebViewEvent('gyroscopeFailed', {
+        error: eventData.error
+      });
+    }
+
+    function checkVersion() {
+      if (!versionAtLeast('8.0')) {
+        console.warn('[Telegram.WebApp] Gyroscope is not supported in version ' + webAppVersion);
+        return false;
+      }
+      return true;
+    }
+
+    gyroscope.start = function(params, callback) {
+      params = params || {};
+      if (!checkVersion()) {
+        return gyroscope;
+      }
+      var req_params = {};
+      var refresh_rate = parseInt(params.refresh_rate || 1000);
+      if (isNaN(refresh_rate) || refresh_rate < 20 || refresh_rate > 1000) {
+        console.warn('[Telegram.WebApp] Gyroscope refresh_rate is invalid', refresh_rate);
+      } else {
+        req_params.refresh_rate = refresh_rate;
+      }
+
+      if (callback) {
+        startCallbacks.push(callback);
+      }
+      WebView.postEvent('web_app_start_gyroscope', false, req_params);
+      return gyroscope;
+    };
+    gyroscope.stop = function(callback) {
+      if (!checkVersion()) {
+        return gyroscope;
+      }
+      if (callback) {
+        stopCallbacks.push(callback);
+      }
+      WebView.postEvent('web_app_stop_gyroscope');
+      return gyroscope;
+    };
+    return gyroscope;
+  })();
+
+  var webAppInvoices = {};
+  function onInvoiceClosed(eventType, eventData) {
+    if (eventData.slug && webAppInvoices[eventData.slug]) {
+      var invoiceData = webAppInvoices[eventData.slug];
+      delete webAppInvoices[eventData.slug];
+      if (invoiceData.callback) {
+        invoiceData.callback(eventData.status);
+      }
+      receiveWebViewEvent('invoiceClosed', {
+        url: invoiceData.url,
+        status: eventData.status
+      });
+    }
+  }
+
+  var webAppPopupOpened = false;
+  function onPopupClosed(eventType, eventData) {
+    if (webAppPopupOpened) {
+      var popupData = webAppPopupOpened;
+      webAppPopupOpened = false;
+      var button_id = null;
+      if (typeof eventData.button_id !== 'undefined') {
+        button_id = eventData.button_id;
+      }
+      if (popupData.callback) {
+        popupData.callback(button_id);
+      }
+      receiveWebViewEvent('popupClosed', {
+        button_id: button_id
+      });
+    }
+  }
+
+  var webAppScanQrPopupOpened = false;
+  function onQrTextReceived(eventType, eventData) {
+    if (webAppScanQrPopupOpened) {
+      var popupData = webAppScanQrPopupOpened;
+      var data = null;
+      if (typeof eventData.data !== 'undefined') {
+        data = eventData.data;
+      }
+      if (popupData.callback) {
+        if (popupData.callback(data)) {
+          webAppScanQrPopupOpened = false;
+          WebView.postEvent('web_app_close_scan_qr_popup', false);
+        }
+      }
+      receiveWebViewEvent('qrTextReceived', {
+        data: data
+      });
+    }
+  }
+  function onScanQrPopupClosed(eventType, eventData) {
+    webAppScanQrPopupOpened = false;
+    receiveWebViewEvent('scanQrPopupClosed');
+  }
+
+  function onClipboardTextReceived(eventType, eventData) {
+    if (eventData.req_id && webAppCallbacks[eventData.req_id]) {
+      var requestData = webAppCallbacks[eventData.req_id];
+      delete webAppCallbacks[eventData.req_id];
+      var data = null;
+      if (typeof eventData.data !== 'undefined') {
+        data = eventData.data;
+      }
+      if (requestData.callback) {
+        requestData.callback(data);
+      }
+      receiveWebViewEvent('clipboardTextReceived', {
+        data: data
+      });
+    }
+  }
+
+  var WebAppWriteAccessRequested = false;
+  function onWriteAccessRequested(eventType, eventData) {
+    if (WebAppWriteAccessRequested) {
+      var requestData = WebAppWriteAccessRequested;
+      WebAppWriteAccessRequested = false;
+      if (requestData.callback) {
+        requestData.callback(eventData.status == 'allowed');
+      }
+      receiveWebViewEvent('writeAccessRequested', {
+        status: eventData.status
+      });
+    }
+  }
+
+  function getRequestedContact(callback, timeout) {
+    var reqTo, fallbackTo, reqDelay = 0;
+    var reqInvoke = function() {
+      invokeCustomMethod('getRequestedContact', {}, function(err, res) {
+        if (res.substr(0, 1) == '"' && res.substr(-1) == '"') { // macos fix
+          res = JSON.parse(res);
+        }
+        if (res && res.length) {
+          clearTimeout(fallbackTo);
+          callback(res);
+        } else {
+          reqDelay += 50;
+          reqTo = setTimeout(reqInvoke, reqDelay);
+        }
+      });
+    };
+    var fallbackInvoke = function() {
+      clearTimeout(reqTo);
+      callback('');
+    };
+    fallbackTo = setTimeout(fallbackInvoke, timeout);
+    reqInvoke();
+  }
+
+  var WebAppContactRequested = false;
+  function onPhoneRequested(eventType, eventData) {
+    if (WebAppContactRequested) {
+      var requestData = WebAppContactRequested;
+      WebAppContactRequested = false;
+      var requestSent = eventData.status == 'sent';
+      var webViewEvent = {
+        status: eventData.status
+      };
+      if (requestSent) {
+        getRequestedContact(function(res) {
+          if (res && res.length) {
+            webViewEvent.response = res;
+            webViewEvent.responseUnsafe = Utils.urlParseQueryString(res);
+            for (var key in webViewEvent.responseUnsafe) {
+              var val = webViewEvent.responseUnsafe[key];
+              try {
+                if (val.substr(0, 1) == '{' && val.substr(-1) == '}' ||
+                    val.substr(0, 1) == '[' && val.substr(-1) == ']') {
+                  webViewEvent.responseUnsafe[key] = JSON.parse(val);
+                }
+              } catch (e) {}
+            }
+          }
+          if (requestData.callback) {
+            requestData.callback(requestSent, webViewEvent);
+          }
+          receiveWebViewEvent('contactRequested', webViewEvent);
+        }, 3000);
+      } else {
+        if (requestData.callback) {
+          requestData.callback(requestSent, webViewEvent);
+        }
+        receiveWebViewEvent('contactRequested', webViewEvent);
+      }
+    }
+  }
+
+  var webAppDownloadFileRequested = false;
+  function onFileDownloadRequested(eventType, eventData) {
+    if (webAppDownloadFileRequested) {
+      var requestData = webAppDownloadFileRequested;
+      webAppDownloadFileRequested = false;
+      var isDownloading = eventData.status == 'downloading';
+      if (requestData.callback) {
+        requestData.callback(isDownloading);
+      }
+      receiveWebViewEvent('fileDownloadRequested', {
+        status: isDownloading ? 'downloading' : 'cancelled'
+      });
+    }
+  }
+
+  function onCustomMethodInvoked(eventType, eventData) {
+    if (eventData.req_id && webAppCallbacks[eventData.req_id]) {
+      var requestData = webAppCallbacks[eventData.req_id];
+      delete webAppCallbacks[eventData.req_id];
+      var res = null, err = null;
+      if (typeof eventData.result !== 'undefined') {
+        res = eventData.result;
+      }
+      if (typeof eventData.error !== 'undefined') {
+        err = eventData.error;
+      }
+      if (requestData.callback) {
+        requestData.callback(err, res);
+      }
+    }
+  }
+
+  function invokeCustomMethod(method, params, callback) {
+    if (!versionAtLeast('6.9')) {
+      console.error('[Telegram.WebApp] Method invokeCustomMethod is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    var req_id = generateCallbackId(16);
+    var req_params = {req_id: req_id, method: method, params: params || {}};
+    webAppCallbacks[req_id] = {
+      callback: callback
+    };
+    WebView.postEvent('web_app_invoke_custom_method', false, req_params);
+  };
+
+  if (!window.Telegram) {
+    window.Telegram = {};
+  }
+
+  Object.defineProperty(WebApp, 'initData', {
+    get: function(){ return webAppInitData; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'initDataUnsafe', {
+    get: function(){ return webAppInitDataUnsafe; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'version', {
+    get: function(){ return webAppVersion; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'platform', {
+    get: function(){ return webAppPlatform; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'colorScheme', {
+    get: function(){ return colorScheme; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'themeParams', {
+    get: function(){ return themeParams; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'isExpanded', {
+    get: function(){ return isExpanded; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'viewportHeight', {
+    get: function(){ return (viewportHeight === false ? window.innerHeight : viewportHeight) - bottomBarHeight; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'viewportStableHeight', {
+    get: function(){ return (viewportStableHeight === false ? window.innerHeight : viewportStableHeight) - bottomBarHeight; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'safeAreaInset', {
+    get: function(){ return safeAreaInset; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'contentSafeAreaInset', {
+    get: function(){ return contentSafeAreaInset; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'isClosingConfirmationEnabled', {
+    set: function(val){ setClosingConfirmation(val); },
+    get: function(){ return isClosingConfirmationEnabled; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'isVerticalSwipesEnabled', {
+    set: function(val){ toggleVerticalSwipes(val); },
+    get: function(){ return isVerticalSwipesEnabled; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'isFullscreen', {
+    get: function(){ return webAppIsFullscreen; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'isOrientationLocked', {
+    set: function(val){ toggleOrientationLock(val); },
+    get: function(){ return webAppIsOrientationLocked; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'isActive', {
+    get: function(){ return webAppIsActive; },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'headerColor', {
+    set: function(val){ setHeaderColor(val); },
+    get: function(){ return getHeaderColor(); },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'backgroundColor', {
+    set: function(val){ setBackgroundColor(val); },
+    get: function(){ return getBackgroundColor(); },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'bottomBarColor', {
+    set: function(val){ setBottomBarColor(val); },
+    get: function(){ return getBottomBarColor(); },
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'BackButton', {
+    value: BackButton,
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'MainButton', {
+    value: MainButton,
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'SecondaryButton', {
+    value: SecondaryButton,
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'SettingsButton', {
+    value: SettingsButton,
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'HapticFeedback', {
+    value: HapticFeedback,
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'CloudStorage', {
+    value: CloudStorage,
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'DeviceStorage', {
+    value: DeviceStorage,
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'SecureStorage', {
+    value: SecureStorage,
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'BiometricManager', {
+    value: BiometricManager,
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'Accelerometer', {
+    value: Accelerometer,
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'DeviceOrientation', {
+    value: DeviceOrientation,
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'Gyroscope', {
+    value: Gyroscope,
+    enumerable: true
+  });
+  Object.defineProperty(WebApp, 'LocationManager', {
+    value: LocationManager,
+    enumerable: true
+  });
+  WebApp.isVersionAtLeast = function(ver) {
+    return versionAtLeast(ver);
+  };
+  WebApp.setHeaderColor = function(color_key) {
+    WebApp.headerColor = color_key;
+  };
+  WebApp.setBackgroundColor = function(color) {
+    WebApp.backgroundColor = color;
+  };
+  WebApp.setBottomBarColor = function(color) {
+    WebApp.bottomBarColor = color;
+  };
+  WebApp.enableClosingConfirmation = function() {
+    WebApp.isClosingConfirmationEnabled = true;
+  };
+  WebApp.disableClosingConfirmation = function() {
+    WebApp.isClosingConfirmationEnabled = false;
+  };
+  WebApp.enableVerticalSwipes = function() {
+    WebApp.isVerticalSwipesEnabled = true;
+  };
+  WebApp.disableVerticalSwipes = function() {
+    WebApp.isVerticalSwipesEnabled = false;
+  };
+  WebApp.lockOrientation = function() {
+    WebApp.isOrientationLocked = true;
+  };
+  WebApp.unlockOrientation = function() {
+    WebApp.isOrientationLocked = false;
+  };
+  WebApp.requestFullscreen = function() {
+    if (!versionAtLeast('8.0')) {
+      console.error('[Telegram.WebApp] Method requestFullscreen is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    WebView.postEvent('web_app_request_fullscreen');
+  };
+  WebApp.exitFullscreen = function() {
+    if (!versionAtLeast('8.0')) {
+      console.error('[Telegram.WebApp] Method exitFullscreen is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    WebView.postEvent('web_app_exit_fullscreen');
+  };
+  WebApp.addToHomeScreen = function() {
+    if (!versionAtLeast('8.0')) {
+      console.error('[Telegram.WebApp] Method addToHomeScreen is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    WebView.postEvent('web_app_add_to_home_screen');
+  };
+  WebApp.checkHomeScreenStatus = function(callback) {
+    if (!versionAtLeast('8.0')) {
+      console.error('[Telegram.WebApp] Method checkHomeScreenStatus is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    if (callback) {
+      homeScreenCallbacks.push(callback);
+    }
+    WebView.postEvent('web_app_check_home_screen');
+  };
+  WebApp.onEvent = function(eventType, callback) {
+    onWebViewEvent(eventType, callback);
+  };
+  WebApp.offEvent = function(eventType, callback) {offWebViewEvent(eventType, callback);
+  };
+  WebApp.sendData = function (data) {
+    if (!data || !data.length) {
+      console.error('[Telegram.WebApp] Data is required', data);
+      throw Error('WebAppDataInvalid');
+    }
+    if (byteLength(data) > 4096) {
+      console.error('[Telegram.WebApp] Data is too long', data);
+      throw Error('WebAppDataInvalid');
+    }
+    WebView.postEvent('web_app_data_send', false, {data: data});
+  };
+  WebApp.switchInlineQuery = function (query, choose_chat_types) {
+    if (!versionAtLeast('6.6')) {
+      console.error('[Telegram.WebApp] Method switchInlineQuery is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    if (!initParams.tgWebAppBotInline) {
+      console.error('[Telegram.WebApp] Inline mode is disabled for this bot. Read more about inline mode: https://core.telegram.org/bots/inline');
+      throw Error('WebAppInlineModeDisabled');
+    }
+    query = query || '';
+    if (query.length > 256) {
+      console.error('[Telegram.WebApp] Inline query is too long', query);
+      throw Error('WebAppInlineQueryInvalid');
+    }
+    var chat_types = [];
+    if (choose_chat_types) {
+      if (!Array.isArray(choose_chat_types)) {
+        console.error('[Telegram.WebApp] Choose chat types should be an array', choose_chat_types);
+        throw Error('WebAppInlineChooseChatTypesInvalid');
+      }
+      var good_types = {users: 1, bots: 1, groups: 1, channels: 1};
+      for (var i = 0; i < choose_chat_types.length; i++) {
+        var chat_type = choose_chat_types[i];
+        if (!good_types[chat_type]) {
+          console.error('[Telegram.WebApp] Choose chat type is invalid', chat_type);
+          throw Error('WebAppInlineChooseChatTypeInvalid');
+        }
+        if (good_types[chat_type] != 2) {
+          good_types[chat_type] = 2;
+          chat_types.push(chat_type);
+        }
+      }
+    }
+    WebView.postEvent('web_app_switch_inline_query', false, {query: query, chat_types: chat_types});
+  };
+  WebApp.openLink = function (url, options) {
+    var a = document.createElement('A');
+    a.href = url;
+    if (a.protocol != 'http:' &&
+        a.protocol != 'https:') {
+      console.error('[Telegram.WebApp] Url protocol is not supported', url);
+      throw Error('WebAppTgUrlInvalid');
+    }
+    var url = a.href;
+    options = options || {};
+    if (versionAtLeast('6.1')) {
+      var req_params = {url: url};
+      if (versionAtLeast('6.4') && options.try_instant_view) {
+        req_params.try_instant_view = true;
+      }
+      if (versionAtLeast('7.6') && options.try_browser) {
+        req_params.try_browser = options.try_browser;
+      }
+      WebView.postEvent('web_app_open_link', false, req_params);
+    } else {
+      window.open(url, '_blank');
+    }
+  };
+  WebApp.openTelegramLink = function (url, options) {
+    var a = document.createElement('A');
+    a.href = url;
+    if (a.protocol != 'http:' &&
+        a.protocol != 'https:') {
+      console.error('[Telegram.WebApp] Url protocol is not supported', url);
+      throw Error('WebAppTgUrlInvalid');
+    }
+    if (!isTmeHostname(a.hostname)) {
+      console.error('[Telegram.WebApp] Url host is not supported', url);
+      throw Error('WebAppTgUrlInvalid');
+    }
+    var path_full = a.pathname + a.search;
+    options = options || {};
+    if (isIframe || versionAtLeast('6.1')) {
+      var req_params = {path_full: path_full};
+      if (options.force_request) {
+        req_params.force_request = true;
+      }
+      WebView.postEvent('web_app_open_tg_link', false, req_params);
+    } else {
+      location.href = 'https://t.me' + path_full;
+    }
+  };
+  WebApp.openInvoice = function (url, callback) {
+    var a = document.createElement('A'), match, slug;
+    a.href = url;
+    if (a.protocol != 'http:' &&
+        a.protocol != 'https:' ||
+        !isTmeHostname(a.hostname) ||
+        !(match = a.pathname.match(/^\/(\$|invoice\/)([A-Za-z0-9\-_=]+)$/)) ||
+        !(slug = match[2])) {
+      console.error('[Telegram.WebApp] Invoice url is invalid', url);
+      throw Error('WebAppInvoiceUrlInvalid');
+    }
+    if (!versionAtLeast('6.1')) {
+      console.error('[Telegram.WebApp] Method openInvoice is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    if (webAppInvoices[slug]) {
+      console.error('[Telegram.WebApp] Invoice is already opened');
+      throw Error('WebAppInvoiceOpened');
+    }
+    webAppInvoices[slug] = {
+      url: url,
+      callback: callback
+    };
+    WebView.postEvent('web_app_open_invoice', false, {slug: slug});
+  };
+  WebApp.showPopup = function (params, callback) {
+    if (!versionAtLeast('6.2')) {
+      console.error('[Telegram.WebApp] Method showPopup is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    if (webAppPopupOpened) {
+      console.error('[Telegram.WebApp] Popup is already opened');
+      throw Error('WebAppPopupOpened');
+    }
+    var title = '';
+    var message = '';
+    var buttons = [];
+    var popup_buttons = {};
+    var popup_params = {};
+    if (typeof params.title !== 'undefined') {
+      title = strTrim(params.title);
+      if (title.length > 64) {
+        console.error('[Telegram.WebApp] Popup title is too long', title);
+        throw Error('WebAppPopupParamInvalid');
+      }
+      if (title.length > 0) {
+        popup_params.title = title;
+      }
+    }
+    if (typeof params.message !== 'undefined') {
+      message = strTrim(params.message);
+    }
+    if (!message.length) {
+      console.error('[Telegram.WebApp] Popup message is required', params.message);
+      throw Error('WebAppPopupParamInvalid');
+    }
+    if (message.length > 256) {
+      console.error('[Telegram.WebApp] Popup message is too long', message);
+      throw Error('WebAppPopupParamInvalid');
+    }
+    popup_params.message = message;
+    if (typeof params.buttons !== 'undefined') {
+      if (!Array.isArray(params.buttons)) {
+        console.error('[Telegram.WebApp] Popup buttons should be an array', params.buttons);
+        throw Error('WebAppPopupParamInvalid');
+      }
+      for (var i = 0; i < params.buttons.length; i++) {
+        var button = params.buttons[i];
+        var btn = {};
+        var id = '';
+        if (typeof button.id !== 'undefined') {
+          id = button.id.toString();
+          if (id.length > 64) {
+            console.error('[Telegram.WebApp] Popup button id is too long', id);
+            throw Error('WebAppPopupParamInvalid');
+          }
+        }
+        btn.id = id;
+        var button_type = button.type;
+        if (typeof button_type === 'undefined') {
+          button_type = 'default';
+        }
+        btn.type = button_type;
+        if (button_type == 'ok' ||
+            button_type == 'close' ||
+            button_type == 'cancel') {
+          // no params needed
+        } else if (button_type == 'default' ||
+                   button_type == 'destructive') {
+          var text = '';
+          if (typeof button.text !== 'undefined') {
+            text = strTrim(button.text);
+          }
+          if (!text.length) {
+            console.error('[Telegram.WebApp] Popup button text is required for type ' + button_type, button.text);
+            throw Error('WebAppPopupParamInvalid');
+          }
+          if (text.length > 64) {
+            console.error('[Telegram.WebApp] Popup button text is too long', text);
+            throw Error('WebAppPopupParamInvalid');
+          }
+          btn.text = text;
+        } else {
+          console.error('[Telegram.WebApp] Popup button type is invalid', button_type);
+          throw Error('WebAppPopupParamInvalid');
+        }
+        buttons.push(btn);
+      }
+    } else {
+      buttons.push({id: '', type: 'close'});
+    }
+    if (buttons.length < 1) {
+      console.error('[Telegram.WebApp] Popup should have at least one button');
+      throw Error('WebAppPopupParamInvalid');
+    }
+    if (buttons.length > 3) {
+      console.error('[Telegram.WebApp] Popup should not have more than 3 buttons');
+      throw Error('WebAppPopupParamInvalid');
+    }
+    popup_params.buttons = buttons;
+
+    webAppPopupOpened = {
+      callback: callback
+    };
+    WebView.postEvent('web_app_open_popup', false, popup_params);
+  };
+  WebApp.showAlert = function (message, callback) {
+    WebApp.showPopup({
+      message: message
+    }, callback ? function(){ callback(); } : null);
+  };
+  WebApp.showConfirm = function (message, callback) {
+    WebApp.showPopup({
+      message: message,
+      buttons: [
+        {type: 'ok', id: 'ok'},
+        {type: 'cancel'}
+      ]
+    }, callback ? function (button_id) {
+      callback(button_id == 'ok');
+    } : null);
+  };
+  WebApp.showScanQrPopup = function (params, callback) {
+    if (!versionAtLeast('6.4')) {
+      console.error('[Telegram.WebApp] Method showScanQrPopup is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    if (webAppScanQrPopupOpened) {
+      console.error('[Telegram.WebApp] Popup is already opened');
+      throw Error('WebAppScanQrPopupOpened');
+    }
+    var text = '';
+    var popup_params = {};
+    if (typeof params.text !== 'undefined') {
+      text = strTrim(params.text);
+      if (text.length > 64) {
+        console.error('[Telegram.WebApp] Scan QR popup text is too long', text);
+        throw Error('WebAppScanQrPopupParamInvalid');
+      }
+      if (text.length > 0) {
+        popup_params.text = text;
+      }
+    }
+
+    webAppScanQrPopupOpened = {
+      callback: callback
+    };
+    WebView.postEvent('web_app_open_scan_qr_popup', false, popup_params);
+  };
+  WebApp.closeScanQrPopup = function () {
+    if (!versionAtLeast('6.4')) {
+      console.error('[Telegram.WebApp] Method closeScanQrPopup is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+
+    webAppScanQrPopupOpened = false;
+    WebView.postEvent('web_app_close_scan_qr_popup', false);
+  };
+  WebApp.readTextFromClipboard = function (callback) {
+    if (!versionAtLeast('6.4')) {
+      console.error('[Telegram.WebApp] Method readTextFromClipboard is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    var req_id = generateCallbackId(16);
+    var req_params = {req_id: req_id};
+    webAppCallbacks[req_id] = {
+      callback: callback
+    };
+    WebView.postEvent('web_app_read_text_from_clipboard', false, req_params);
+  };
+  WebApp.requestWriteAccess = function (callback) {
+    if (!versionAtLeast('6.9')) {
+      console.error('[Telegram.WebApp] Method requestWriteAccess is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    if (WebAppWriteAccessRequested) {
+      console.error('[Telegram.WebApp] Write access is already requested');
+      throw Error('WebAppWriteAccessRequested');
+    }
+    WebAppWriteAccessRequested = {
+      callback: callback
+    };
+    WebView.postEvent('web_app_request_write_access');
+  };
+  WebApp.requestContact = function (callback) {
+    if (!versionAtLeast('6.9')) {
+      console.error('[Telegram.WebApp] Method requestContact is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    if (WebAppContactRequested) {
+      console.error('[Telegram.WebApp] Contact is already requested');
+      throw Error('WebAppContactRequested');
+    }
+    WebAppContactRequested = {
+      callback: callback
+    };
+    WebView.postEvent('web_app_request_phone');
+  };
+  WebApp.downloadFile = function (params, callback) {
+    if (!versionAtLeast('8.0')) {
+      console.error('[Telegram.WebApp] Method downloadFile is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    if (webAppDownloadFileRequested) {
+      console.error('[Telegram.WebApp] Popup is already opened');
+      throw Error('WebAppDownloadFilePopupOpened');
+    }
+    var a = document.createElement('A');
+
+    var dl_params = {};
+    if (!params || !params.url || !params.url.length) {
+      console.error('[Telegram.WebApp] Url is required');
+      throw Error('WebAppDownloadFileParamInvalid');
+    }
+    a.href = params.url;
+    if (a.protocol != 'https:') {
+      console.error('[Telegram.WebApp] Url protocol is not supported', url);
+      throw Error('WebAppDownloadFileParamInvalid');
+    }
+    dl_params.url = a.href;
+
+    if (!params || !params.file_name || !params.file_name.length) {
+      console.error('[Telegram.WebApp] File name is required');
+      throw Error('WebAppDownloadFileParamInvalid');
+    }
+    dl_params.file_name = params.file_name;
+
+    webAppDownloadFileRequested = {
+      callback: callback
+    };
+    WebView.postEvent('web_app_request_file_download', false, dl_params);
+  };
+  WebApp.shareToStory = function (media_url, params) {
+    params = params || {};
+    if (!versionAtLeast('7.8')) {
+      console.error('[Telegram.WebApp] Method shareToStory is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    var a = document.createElement('A');
+    a.href = media_url;
+    if (a.protocol != 'http:' &&
+        a.protocol != 'https:') {
+      console.error('[Telegram.WebApp] Media url protocol is not supported', url);
+      throw Error('WebAppMediaUrlInvalid');
+    }
+    var share_params = {};
+    share_params.media_url = a.href;
+    if (typeof params.text !== 'undefined') {
+      var text = strTrim(params.text);
+      if (text.length > 2048) {
+        console.error('[Telegram.WebApp] Text is too long', text);
+        throw Error('WebAppShareToStoryParamInvalid');
+      }
+      if (text.length > 0) {
+        share_params.text = text;
+      }
+    }
+    if (typeof params.widget_link !== 'undefined') {
+      params.widget_link = params.widget_link || {};
+      a.href = params.widget_link.url;
+      if (a.protocol != 'http:' &&
+          a.protocol != 'https:') {
+        console.error('[Telegram.WebApp] Link protocol is not supported', url);
+        throw Error('WebAppShareToStoryParamInvalid');
+      }
+      var widget_link = {
+        url: a.href
+      };
+      if (typeof params.widget_link.name !== 'undefined') {
+        var link_name = strTrim(params.widget_link.name);
+        if (link_name.length > 48) {
+          console.error('[Telegram.WebApp] Link name is too long', link_name);
+          throw Error('WebAppShareToStoryParamInvalid');
+        }
+        if (link_name.length > 0) {
+          widget_link.name = link_name;
+        }
+      }
+      share_params.widget_link = widget_link;
+    }
+
+    WebView.postEvent('web_app_share_to_story', false, share_params);
+  };
+  WebApp.shareMessage = function (msg_id, callback) {
+    if (!versionAtLeast('8.0')) {
+      console.error('[Telegram.WebApp] Method shareMessage is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    if (WebAppShareMessageOpened) {
+      console.error('[Telegram.WebApp] Share message is already opened');
+      throw Error('WebAppShareMessageOpened');
+    }
+    WebAppShareMessageOpened = {
+      callback: callback
+    };
+    WebView.postEvent('web_app_send_prepared_message', false, {id: msg_id});
+  };
+  WebApp.requestChat = function (req_id, callback) {
+    if (!versionAtLeast('9.6')) {
+      console.error('[Telegram.WebApp] Method requestChat is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    if (WebAppRequestChatOpened) {
+      console.error('[Telegram.WebApp] Request chat is already opened');
+      throw Error('WebAppRequestChatOpened');
+    }
+    WebAppRequestChatOpened = {
+      callback: callback
+    };
+    WebView.postEvent('web_app_request_chat', false, {req_id: req_id});
+  };
+  WebApp.setEmojiStatus = function (custom_emoji_id, params, callback) {
+    params = params || {};
+    if (!versionAtLeast('8.0')) {
+      console.error('[Telegram.WebApp] Method setEmojiStatus is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    var status_params = {};
+    status_params.custom_emoji_id = custom_emoji_id;
+    if (typeof params.duration !== 'undefined') {
+      status_params.duration = params.duration;
+    }
+    if (WebAppEmojiStatusRequested) {
+      console.error('[Telegram.WebApp] Emoji status is already requested');
+      throw Error('WebAppEmojiStatusRequested');
+    }
+    WebAppEmojiStatusRequested = {
+      callback: callback
+    };
+    WebView.postEvent('web_app_set_emoji_status', false, status_params);
+  };
+  WebApp.requestEmojiStatusAccess = function (callback) {
+    if (!versionAtLeast('8.0')) {
+      console.error('[Telegram.WebApp] Method requestEmojiStatusAccess is not supported in version ' + webAppVersion);
+      throw Error('WebAppMethodUnsupported');
+    }
+    if (WebAppEmojiStatusAccessRequested) {
+      console.error('[Telegram.WebApp] Emoji status permission is already requested');
+      throw Error('WebAppEmojiStatusAccessRequested');
+    }
+    WebAppEmojiStatusAccessRequested = {
+      callback: callback
+    };
+    WebView.postEvent('web_app_request_emoji_status_access');
+  };
+  WebApp.invokeCustomMethod = function (method, params, callback) {
+    invokeCustomMethod(method, params, callback);
+  };
+  WebApp.hideKeyboard = function () {
+    WebView.postEvent('web_app_hide_keyboard');
+  };
+  WebApp.ready = function () {
+    WebView.postEvent('web_app_ready');
+  };
+  WebApp.expand = function () {
+    WebView.postEvent('web_app_expand');
+  };
+  WebApp.close = function (options) {
+    options = options || {};
+    var req_params = {};
+    if (versionAtLeast('7.6') && options.return_back) {
+      req_params.return_back = true;
+    }
+    WebView.postEvent('web_app_close', false, req_params);
+  };
+
+  window.Telegram.WebApp = WebApp;
+
+  updateHeaderColor();
+  updateBackgroundColor();
+  updateBottomBarColor();
+  setViewportHeight();
+  if (initParams.tgWebAppShowSettings) {
+    SettingsButton.show();
+  }
+
+  window.addEventListener('resize', onWindowResize);
+  if (isIframe) {
+    document.addEventListener('click', linkHandler);
+  }
+
+  WebView.onEvent('theme_changed', onThemeChanged);
+  WebView.onEvent('viewport_changed', onViewportChanged);
+  WebView.onEvent('safe_area_changed', onSafeAreaChanged);
+  WebView.onEvent('content_safe_area_changed', onContentSafeAreaChanged);
+  WebView.onEvent('visibility_changed', onVisibilityChanged);
+  WebView.onEvent('invoice_closed', onInvoiceClosed);
+  WebView.onEvent('popup_closed', onPopupClosed);
+  WebView.onEvent('qr_text_received', onQrTextReceived);
+  WebView.onEvent('scan_qr_popup_closed', onScanQrPopupClosed);
+  WebView.onEvent('clipboard_text_received', onClipboardTextReceived);
+  WebView.onEvent('write_access_requested', onWriteAccessRequested);
+  WebView.onEvent('phone_requested', onPhoneRequested);
+  WebView.onEvent('file_download_requested', onFileDownloadRequested);
+  WebView.onEvent('custom_method_invoked', onCustomMethodInvoked);
+  WebView.onEvent('fullscreen_changed', onFullscreenChanged);
+  WebView.onEvent('fullscreen_failed', onFullscreenFailed);
+  WebView.onEvent('home_screen_added', onHomeScreenAdded);
+  WebView.onEvent('home_screen_checked', onHomeScreenChecked);
+  WebView.onEvent('prepared_message_sent', onPreparedMessageSent);
+  WebView.onEvent('prepared_message_failed', onPreparedMessageFailed);
+  WebView.onEvent('requested_chat_sent', onRequestedChatSent);
+  WebView.onEvent('requested_chat_failed', onRequestedChatFailed);
+  WebView.onEvent('emoji_status_set', onEmojiStatusSet);
+  WebView.onEvent('emoji_status_failed', onEmojiStatusFailed);
+  WebView.onEvent('emoji_status_access_requested', onEmojiStatusAccessRequested);
+  WebView.postEvent('web_app_request_theme');
+  WebView.postEvent('web_app_request_viewport');
+  WebView.postEvent('web_app_request_safe_area');
+  WebView.postEvent('web_app_request_content_safe_area');
+
+})();
+
+</script>
+<script>
+(function(){
+  "use strict";
+
+  // Tell Telegram the app is ready and may use the full viewport. Safe
+  // no-op outside a real Telegram client.
+  try{
+    if(window.Telegram && window.Telegram.WebApp){
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    }
+  }catch(e){}
+
+  // Real tactile feedback via Telegram's own bridge. Inside an actual
+  // Telegram client (including on iPhone) Telegram.WebApp.HapticFeedback
+  // drives the native Taptic Engine directly — this is NOT the standard
+  // Web Vibration API (which iOS never implements), it's Telegram's own
+  // proprietary channel, so it works on iOS too. kind: "selection" for
+  // chip/tab switches, "impact-light"/"impact-soft" for opening/closing
+  // a screen, "success" for favoriting. Falls back to navigator.vibrate
+  // (Android browsers only) when run outside Telegram, and always pairs
+  // with the CSS :active press-scale so there's a felt response either way.
+  function haptic(kind){
+    try{
+      var hf = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback;
+      if(hf){
+        if(kind === "selection") hf.selectionChanged();
+        else if(kind === "success") hf.notificationOccurred("success");
+        else if(kind === "impact-soft") hf.impactOccurred("soft");
+        else if(kind === "impact-medium") hf.impactOccurred("medium");
+        else hf.impactOccurred("light");
+        return;
+      }
+    }catch(e){ /* fall through to vibrate fallback below */ }
+    try{
+      if(navigator.vibrate) navigator.vibrate(kind === "success" ? [8,30,8] : 8);
+    }catch(e){ /* unsupported — the press animation still carries the feel */ }
+  }
+
+  var CATEGORIES = [
+    {id:"all", label:"Все"},
+    {id:"basics", label:"Основы"},
+    {id:"exchange", label:"Биржи"},
+    {id:"security", label:"Безопасность"}
+  ];
+  var CATEGORY_LABEL = {basics:"Основы", exchange:"Биржи", security:"Безопасность"};
+
+  var SECTIONS = [
+    {id:"base", title:"База P2P арбитража", category:"basics", icon:"i-layers",
+     desc:"Что такое P2P арбитраж и как устроена эта модель заработка.",
+     outline:["Суть модели: на чём именно зарабатывает P2P арбитражник",
+              "Из каких этапов состоит пайплайн — от аккаунта до сделки",
+              "Какие ресурсы нужны для старта",
+              "Частые заблуждения новичков"]},
+    {id:"reg", title:"Регистрация на биржах", category:"basics", icon:"i-user-plus",
+     desc:"Как правильно зарегистрировать аккаунт и подготовить его к работе.",
+     outline:["Какие данные и документы понадобятся",
+              "Пошаговая регистрация без ошибок",
+              "Типичные причины блокировки на этом этапе",
+              "Как подготовить аккаунт к верификации"]},
+    {id:"exchanges", title:"Выбор биржи", category:"exchange", icon:"i-building",
+     desc:"Актуальные площадки на сегодня и по каким критериям их сравнивать.",
+     outline:["Рейтинг актуальных бирж на сегодняшний день",
+              "На что смотреть: комиссии, лимиты, репутация",
+              "Плюсы и минусы крупных и нишевых площадок",
+              "Когда стоит работать сразу на нескольких биржах"]},
+    {id:"firststeps", title:"Первые шаги", category:"basics", icon:"i-footprints",
+     desc:"Что сделать в первую неделю, чтобы выйти на первую сделку.",
+     outline:["План действий на первые 7 дней",
+              "Как выбрать первую пару и объём сделки",
+              "Что проверить перед первой сделкой",
+              "Разбор первой сделки на реальном примере"]},
+    {id:"status", title:"Статусы аккаунта", category:"exchange", icon:"i-badge-check",
+     desc:"Как получить нужный статус верификации и зачем он нужен.",
+     outline:["Какие статусы бывают и что они дают",
+              "Условия повышения статуса на разных биржах",
+              "Как ускорить получение нужного уровня",
+              "Что делать, если статус не подтверждают"]},
+    {id:"firstad", title:"Первое объявление", category:"exchange", icon:"i-megaphone",
+     desc:"Как составить и разместить первое объявление на покупку или продажу.",
+     outline:["Структура объявления, которое вызывает доверие",
+              "Как выставить курс и лимиты",
+              "Условия сделки: что указать обязательно",
+              "Ошибки, из-за которых объявление игнорируют"]},
+    {id:"buysell", title:"Покупка и продажа крипты", category:"exchange", icon:"i-swap",
+     desc:"Пошаговый разбор сделки от заявки до перевода средств.",
+     outline:["Сценарий сделки шаг за шагом",
+              "Проверка платежа перед подтверждением",
+              "Как закрыть сделку без задержек",
+              "Что делать при спорной ситуации"]},
+    {id:"competition", title:"Разбор конкуренции", category:"exchange", icon:"i-trophy",
+     desc:"Как анализировать других трейдеров и выстраивать позицию на бирже.",
+     outline:["Как читать объявления конкурентов",
+              "На какие детали смотреть в разных биржах",
+              "Как выделиться курсом, условиями, скоростью",
+              "Когда стоит менять стратегию под рынок"]},
+    {id:"security", title:"Безопасность", category:"security", icon:"i-shield",
+     desc:"Как защититься от мошенников и что делать, если уже попался.",
+     outline:["Признаки мошеннической сделки",
+              "Правила, которые снижают риск обмана",
+              "Порядок действий, если сделка пошла не так",
+              "Куда обращаться после попытки мошенничества"]},
+    {id:"support", title:"Диалог с поддержкой", category:"security", icon:"i-messages",
+     desc:"Как переписываться с поддержкой биржи, чтобы решать вопросы быстро.",
+     outline:["Как правильно описать проблему в первом сообщении",
+              "Что приложить, чтобы ускорить ответ",
+              "Как вести себя при эскалации спора",
+              "Шаблоны обращений на частые ситуации"]}
+  ];
+
+  var state = {
+    tab: "list",
+    category: "all",
+    query: "",
+    selectedId: null,
+    favorites: loadFavorites()
+  };
+
+  function loadFavorites(){
+    try{
+      var raw = localStorage.getItem("p2pkb_favorites");
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    }catch(e){ return new Set(); }
+  }
+  function saveFavorites(){
+    try{
+      localStorage.setItem("p2pkb_favorites", JSON.stringify(Array.from(state.favorites)));
+    }catch(e){ /* storage unavailable — favorites just won't persist */ }
+  }
+
+  function el(html){
+    var t = document.createElement("template");
+    t.innerHTML = html.trim();
+    return t.content.firstElementChild;
+  }
+
+  var BAR_HEIGHTS = ['40%','62%','48%','100%','72%','56%'];
+
+  function cardHTML(s){
+    return (
+      '<article class="card" data-id="'+s.id+'">'+
+        '<div class="card-title">'+s.title+'</div>'+
+        '<div class="card-desc">'+s.desc+'</div>'+
+        '<div class="card-thumb '+s.category+'">'+
+          '<div class="thumb-eyebrow">'+CATEGORY_LABEL[s.category]+'</div>'+
+          '<div class="thumb-title">'+s.title+'</div>'+
+          '<div class="thumb-mock">'+
+            '<div class="thumb-mock-line w1"></div>'+
+            '<div class="thumb-mock-line w2"></div>'+
+            '<div class="thumb-bars">'+
+              BAR_HEIGHTS.map(function(h,i){ return '<i style="height:'+h+'"'+(i===3?' class="peak"':'')+'></i>'; }).join('')+
+            '</div>'+
+          '</div>'+
+          '<div class="thumb-badge"><span class="dot"><svg viewBox="0 0 24 24"><use href="#'+s.icon+'"/></svg></span><span class="bar"></span></div>'+
+        '</div>'+
+      '</article>'
+    );
+  }
+
+  function renderChips(){
+    var box = document.getElementById("chips");
+    box.innerHTML = "";
+    CATEGORIES.forEach(function(c){
+      var chip = el('<button class="seg-btn'+(state.category===c.id?' active':'')+'" data-cat="'+c.id+'">'+c.label+'</button>');
+      chip.addEventListener("click", function(){
+        if(state.category === c.id) return;
+        haptic("selection");
+        state.category = c.id;
+        renderChips();
+        renderList();
+      });
+      box.appendChild(chip);
+    });
+  }
+
+  function matches(s){
+    var inCat = state.category === "all" || s.category === state.category;
+    var q = state.query.trim().toLowerCase();
+    var inQuery = !q || s.title.toLowerCase().indexOf(q) !== -1 || s.desc.toLowerCase().indexOf(q) !== -1;
+    return inCat && inQuery;
+  }
+
+  function renderList(){
+    var list = SECTIONS.filter(matches);
+    var box = document.getElementById("cardList");
+    var empty = document.getElementById("emptyState");
+    box.innerHTML = list.map(cardHTML).join("");
+    empty.hidden = list.length !== 0;
+    Array.prototype.forEach.call(box.querySelectorAll(".card"), function(cardEl){
+      cardEl.addEventListener("click", function(){
+        openDetail(cardEl.getAttribute("data-id"));
+      });
+    });
+  }
+
+  function renderFavorites(){
+    var list = SECTIONS.filter(function(s){ return state.favorites.has(s.id); });
+    var box = document.getElementById("favList");
+    var empty = document.getElementById("favEmpty");
+    box.innerHTML = list.map(cardHTML).join("");
+    empty.hidden = list.length !== 0;
+    Array.prototype.forEach.call(box.querySelectorAll(".card"), function(cardEl){
+      cardEl.addEventListener("click", function(){
+        openDetail(cardEl.getAttribute("data-id"));
+        switchTab("list");
+      });
+    });
+  }
+
+  function openDetail(id){
+    var s = SECTIONS.find(function(x){ return x.id === id; });
+    if(!s) return;
+    haptic("impact-light");
+    state.selectedId = id;
+    var isFav = state.favorites.has(id);
+    var view = document.getElementById("view-detail");
+    view.innerHTML =
+      '<div class="detail-head">'+
+        '<button class="btn-icon" id="backBtn"><svg viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg></button>'+
+        '<div class="detail-title">'+s.title+'</div>'+
+        '<button class="btn-icon star-btn'+(isFav?' active':'')+'" id="starBtn"><svg viewBox="0 0 24 24" fill="'+(isFav?'currentColor':'none')+'"><use href="#i-star"/></svg></button>'+
+      '</div>'+
+      '<div class="detail-tag"><span class="badge '+s.category+'">'+CATEGORY_LABEL[s.category]+'</span></div>'+
+      '<div class="detail-desc">'+s.desc+'</div>'+
+      '<div class="detail-icon-row"><div class="icon-tile"><svg viewBox="0 0 24 24"><use href="#'+s.icon+'"/></svg></div><span>Раздел базы знаний · P2P арбитраж</span></div>'+
+      '<div class="outline-title">Что внутри раздела</div>'+
+      s.outline.map(function(item, i){
+        return '<div class="outline-item"><span class="outline-num">'+(i+1)+'</span><div>'+item+'</div></div>';
+      }).join("")+
+      '<div class="note">Материал в разработке. Здесь появится полный текст раздела — пошаговые инструкции, скриншоты и примеры.</div>';
+
+    document.getElementById("backBtn").addEventListener("click", closeDetail);
+    document.getElementById("starBtn").addEventListener("click", function(){
+      toggleFavorite(id);
+      openDetail(id);
+    });
+
+    showView("view-detail");
+  }
+
+  function closeDetail(){
+    haptic("impact-soft");
+    state.selectedId = null;
+    showView("view-list");
+  }
+
+  function toggleFavorite(id){
+    haptic(state.favorites.has(id) ? "impact-soft" : "success");
+    if(state.favorites.has(id)) state.favorites.delete(id);
+    else state.favorites.add(id);
+    saveFavorites();
+    renderFavorites();
+  }
+
+  function showView(id){
+    Array.prototype.forEach.call(document.querySelectorAll(".view"), function(v){
+      v.classList.toggle("active", v.id === id);
+    });
+  }
+
+  function switchTab(tab){
+    if(state.tab !== tab) haptic("selection");
+    state.tab = tab;
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(btn){
+      btn.classList.toggle("active", btn.getAttribute("data-tab") === tab);
+    });
+    if(tab === "list"){
+      state.selectedId = null;
+      showView("view-list");
+    } else if(tab === "learning"){
+      showView("view-learning");
+    } else if(tab === "favorites"){
+      renderFavorites();
+      showView("view-favorites");
+    } else if(tab === "profile"){
+      showView("view-profile");
+    }
+  }
+
+  document.getElementById("searchInput").addEventListener("input", function(e){
+    state.query = e.target.value;
+    renderList();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(btn){
+    btn.addEventListener("click", function(){
+      switchTab(btn.getAttribute("data-tab"));
+    });
+  });
+
+  renderChips();
+  renderList();
+
+  // Diagnostics for the Profile tab — shows whether this launch actually
+  // got Telegram's WebApp bridge, so we can tell "no bridge at all" apart
+  // from "bridge present but haptics unsupported/disabled".
+  (function(){
+    var box = document.getElementById("tgDiag");
+    if(!box) return;
+    var lines = [];
+    var tg = window.Telegram && window.Telegram.WebApp;
+    lines.push("Telegram bridge: " + (tg ? "ДА" : "НЕТ (window.Telegram.WebApp не найден)"));
+    if(tg){
+      lines.push("platform: " + tg.platform);
+      lines.push("version: " + tg.version);
+      lines.push("isExpanded: " + tg.isExpanded);
+      try{
+        lines.push("isVersionAtLeast(6.1): " + (tg.isVersionAtLeast ? tg.isVersionAtLeast("6.1") : "n/a"));
+      }catch(e){ lines.push("isVersionAtLeast error: " + e.message); }
+      lines.push("HapticFeedback object: " + (tg.HapticFeedback ? "есть" : "нет"));
+      if(tg.HapticFeedback){
+        lines.push("impactOccurred: " + (typeof tg.HapticFeedback.impactOccurred));
+        lines.push("selectionChanged: " + (typeof tg.HapticFeedback.selectionChanged));
+      }
+      lines.push("TelegramWebviewProxy: " + (window.TelegramWebviewProxy ? "есть" : "нет"));
+      lines.push("window.external.notify: " + (window.external && 'notify' in window.external ? "есть" : "нет"));
+      lines.push("isIframe (window.parent!==window): " + (window.parent != null && window.parent !== window));
+    }
+    box.textContent = lines.join("\n");
+  })();
+})();
+</script>
