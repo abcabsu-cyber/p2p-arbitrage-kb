@@ -343,6 +343,7 @@
   }
 
   /* ---------- detail view ---------- */
+  .tg-back #backBtn{display:none;}
   .detail-head{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:2px;}
   .btn-icon{
     width:34px;height:34px;border-radius:50%;
@@ -4406,7 +4407,6 @@
     empty.hidden = list.length !== 0;
     Array.prototype.forEach.call(box.querySelectorAll(".card"), function(cardEl){
       cardEl.addEventListener("click", function(){
-        switchTab("list");
         openDetail(cardEl.getAttribute("data-id"));
       });
     });
@@ -4416,6 +4416,7 @@
     var s = SECTIONS.find(function(x){ return x.id === id; });
     if(!s) return;
     haptic("impact-light");
+    state.detailFrom = state.tab;   // the tab this screen was pushed from
     state.selectedId = id;
     var isFav = state.favorites.has(id);
     var view = document.getElementById("view-detail");
@@ -4437,16 +4438,19 @@
     document.getElementById("backBtn").addEventListener("click", closeDetail);
     document.getElementById("starBtn").addEventListener("click", function(){
       toggleFavorite(id);
-      openDetail(id);
+      var on = state.favorites.has(id);
+      this.classList.toggle("active", on);
+      this.querySelector("svg").setAttribute("fill", on ? "currentColor" : "none");
     });
 
     showView("view-detail");
   }
 
   function closeDetail(){
+    if(state.selectedId === null) return;
     haptic("impact-soft");
     state.selectedId = null;
-    showView("view-list");
+    showView(state.detailFrom === "favorites" ? "view-favorites" : "view-list");
   }
 
   function toggleFavorite(id){
@@ -4469,6 +4473,16 @@
     window.scrollTo(0, y);
     if(body) body.scrollTop = y;
   }
+  // In Telegram the header arrow is the native back control (like MntrAI);
+  // the in-page arrow is hidden only once the native one is really shown.
+  function updateBackButton(){
+    try{
+      var bb = tg && tg.BackButton;
+      if(!bb || !inTelegram() || !tg.isVersionAtLeast || !tg.isVersionAtLeast("6.1")) return;
+      if(state.selectedId !== null){ bb.show(); document.documentElement.classList.add("tg-back"); }
+      else { bb.hide(); document.documentElement.classList.remove("tg-back"); }
+    }catch(e){}
+  }
   function showView(id){
     var cur = document.querySelector(".view.active");
     if(cur) scrollMem[cur.id] = getScroll();
@@ -4476,11 +4490,13 @@
       v.classList.toggle("active", v.id === id);
     });
     setScroll(id === "view-detail" ? 0 : (scrollMem[id] || 0));
+    updateBackButton();
   }
 
   function switchTab(tab){
     if(state.tab !== tab) haptic("selection");
     state.tab = tab;
+    state.selectedId = null;
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(btn){
       btn.classList.toggle("active", btn.getAttribute("data-tab") === tab);
     });
@@ -4541,6 +4557,8 @@
       if(state.theme === "auto") applyTheme();
     });
   }catch(e){}
+
+  try{ if(tg && tg.BackButton) tg.BackButton.onClick(closeDetail); }catch(e){}
 
   applyTheme();
   renderProfile();
