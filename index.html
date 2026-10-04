@@ -14,6 +14,7 @@
     --fg-secondary:rgba(67,66,66,0.60);
     --fg-tertiary:rgba(67,66,66,0.30);
     --fg-quaternary:rgba(67,66,66,0.18);
+    --fg-muted:rgba(67,66,66,0.46);
     --accent:#1C1C1E;
     --accent-pressed:#000000;
     --on-accent:#FFFFFF;
@@ -49,6 +50,7 @@
       --fg-secondary:rgba(245,243,240,0.60);
       --fg-tertiary:rgba(245,243,240,0.30);
       --fg-quaternary:rgba(245,243,240,0.18);
+      --fg-muted:rgba(245,243,240,0.30);
       --accent:#F5F3F0;
       --accent-pressed:#FFFFFF;
       --on-accent:#121212;
@@ -77,6 +79,7 @@
     --fg-secondary:rgba(245,243,240,0.60);
     --fg-tertiary:rgba(245,243,240,0.30);
     --fg-quaternary:rgba(245,243,240,0.18);
+    --fg-muted:rgba(245,243,240,0.30);
     --accent:#F5F3F0;
     --accent-pressed:#FFFFFF;
     --on-accent:#121212;
@@ -222,7 +225,7 @@
   }
   .thumb-title{
     font:700 15px/1.25 'Inter',sans-serif;color:rgba(17,17,19,0.92);
-    letter-spacing:-0.01em;max-width:52%;
+    letter-spacing:-0.01em;max-width:42%;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
   }
 
@@ -395,12 +398,83 @@
   }
   .profile h2{font:700 20px 'Inter',sans-serif;color:var(--fg);margin:0 0 var(--sp-2);letter-spacing:-0.012em;}
 
+  /* ---------- profile (greeting + avatar from Telegram, grouped rows,
+     theme switcher) ---------- */
+  .pf{padding-top:12px;}
+  .pf-head{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    gap:var(--sp-4);margin-bottom:22px;
+  }
+  .pf-hello{
+    font:700 26px/1.15 'Inter',sans-serif;letter-spacing:-0.022em;
+    color:var(--fg);overflow-wrap:anywhere;
+  }
+  .pf-sub{font:400 15px/1.4 'Inter',sans-serif;color:var(--fg-muted);margin-top:6px;}
+  .pf-avatar{
+    width:52px;height:52px;border-radius:50%;flex-shrink:0;overflow:hidden;
+    background:var(--accent);color:var(--on-accent);
+    display:flex;align-items:center;justify-content:center;
+    font:700 20px 'Inter',sans-serif;
+    box-shadow:var(--shadow-card);
+  }
+  .pf-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+
+  .pf-group{
+    background:var(--elevated);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);overflow:hidden;
+  }
+  .pf-row{
+    width:100%;display:flex;align-items:center;gap:12px;
+    padding:15px var(--sp-4);
+    background:none;border:none;text-align:left;cursor:pointer;
+    font:inherit;color:inherit;
+    transition:background .12s ease;
+  }
+  .pf-row + .pf-row{border-top:1px solid var(--separator);}
+  .pf-row:active{background:var(--fill);}
+  .pf-tile{
+    width:36px;height:36px;border-radius:var(--radius-sm);flex-shrink:0;
+    background:var(--fill);color:var(--fg);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .pf-tile svg{width:18px;height:18px;stroke-width:2;}
+  .pf-txt{flex:1;min-width:0;}
+  .pf-title{font:500 16px/1.3 'Inter',sans-serif;color:var(--fg);}
+  .pf-desc{font:400 13.5px/1.35 'Inter',sans-serif;color:var(--fg-muted);margin-top:2px;}
+  .pf-chev{flex-shrink:0;color:var(--fg-tertiary);display:flex;}
+  .pf-chev svg{width:18px;height:18px;stroke-width:2;}
+
+  .pf-label{
+    font:500 12px 'Inter',sans-serif;letter-spacing:0.12em;text-transform:uppercase;
+    color:var(--fg-muted);margin:26px 4px 10px;
+  }
+  .theme-seg{
+    position:relative;display:flex;padding:4px;
+    background:var(--elevated);border-radius:var(--radius-pill);
+    box-shadow:var(--shadow-card);
+  }
+  .theme-ind{
+    position:absolute;top:4px;bottom:4px;left:4px;
+    width:calc((100% - 8px) / 3);
+    border-radius:var(--radius-pill);
+    background:var(--canvas);
+    box-shadow:inset 0 0 0 1px var(--separator), 0 1px 4px rgba(0,0,0,0.12);
+    transition:transform .22s cubic-bezier(.3,.7,.3,1);
+  }
+  .theme-btn{
+    position:relative;flex:1;height:38px;
+    background:none;border:none;cursor:pointer;
+    font:500 14px 'Inter',sans-serif;color:var(--fg-secondary);
+    transition:color .15s ease;white-space:nowrap;padding:0 4px;
+  }
+  .theme-btn.active{color:var(--fg);}
+
   /* ---------- bottom nav: floating glass pill, detached from the edges
      so the content scrolling underneath bleeds its colors through the
      blur (heavy backdrop-filter + saturation, low-opacity glass fill) ---------- */
   .tabbar{
     position:absolute;
-    left:var(--sp-5);right:var(--sp-5);
+    left:var(--sp-4);right:var(--sp-4);
     bottom:calc(var(--sp-3) + env(safe-area-inset-bottom,0px));
     display:flex;
     border-radius:var(--radius-pill);
@@ -409,18 +483,17 @@
     -webkit-backdrop-filter:blur(28px) saturate(190%);
     border:1px solid var(--glass-border);
     box-shadow:var(--shadow-float);
-    padding:7px;
+    padding:6px;
   }
   .tab{
-    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
     cursor:pointer;color:var(--fg-tertiary);
-    border-radius:var(--radius-pill);
-    padding:6px 4px 7px;
-    font:500 10px 'Inter',sans-serif;background:none;border:none;
-    transition:background .15s ease,color .15s ease;
+    padding:7px 4px;
+    font:500 11px 'Inter',sans-serif;background:none;border:none;
+    transition:color .15s ease;
   }
-  .tab svg{width:20px;height:20px;stroke-width:1.75;}
-  .tab.active{color:var(--fg);background:var(--fill);}
+  .tab svg{width:22px;height:22px;stroke-width:1.75;}
+  .tab.active{color:var(--fg);}
   .tab.active svg{stroke-width:2.1;}
 
   @media (prefers-reduced-motion:no-preference){
@@ -554,12 +627,42 @@
 
     <!-- PROFILE -->
     <section class="view" id="view-profile">
-      <div class="profile">
-        <div class="app-mark">P2P</div>
-        <h2>Профиль</h2>
-        <p class="empty" style="padding:0;">Экран профиля появится в следующей версии — прогресс по разделам, заметки, доступ к обновлениям материалов.</p>
+      <div class="pf">
+        <div class="pf-head">
+          <div>
+            <div class="pf-hello" id="pfHello">Привет!</div>
+            <div class="pf-sub">доступ к базе знаний открыт</div>
+          </div>
+          <div class="pf-avatar" id="pfAvatar">P</div>
+        </div>
+
+        <div class="pf-group">
+          <button class="pf-row" data-go="favorites">
+            <span class="pf-tile"><svg viewBox="0 0 24 24"><use href="#i-bookmark"/></svg></span>
+            <span class="pf-txt">
+              <div class="pf-title">Избранное</div>
+              <div class="pf-desc">материалы, которые сохранишь</div>
+            </span>
+            <span class="pf-chev"><svg viewBox="0 0 24 24"><use href="#i-chevron-right"/></svg></span>
+          </button>
+          <button class="pf-row" data-go="learning">
+            <span class="pf-tile"><svg viewBox="0 0 24 24"><use href="#i-graduation"/></svg></span>
+            <span class="pf-txt">
+              <div class="pf-title">Обучение</div>
+              <div class="pf-desc">уроки и практика по P2P арбитражу</div>
+            </span>
+            <span class="pf-chev"><svg viewBox="0 0 24 24"><use href="#i-chevron-right"/></svg></span>
+          </button>
+        </div>
+
+        <div class="pf-label">Оформление</div>
+        <div class="theme-seg" id="themeSeg">
+          <span class="theme-ind"></span>
+          <button class="theme-btn" data-theme-mode="auto">Как в Telegram</button>
+          <button class="theme-btn" data-theme-mode="light">Светлая</button>
+          <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
+        </div>
       </div>
-      <div id="tgDiag" style="margin-top:var(--sp-4);padding:var(--sp-3);background:var(--fill);border-radius:var(--radius-md);font:12px/1.5 var(--font-mono,monospace);color:var(--fg-secondary);white-space:pre-wrap;"></div>
     </section>
 
   </div>
@@ -4099,7 +4202,8 @@
     category: "all",
     query: "",
     selectedId: null,
-    favorites: loadFavorites()
+    favorites: loadFavorites(),
+    theme: loadTheme()
   };
 
   function loadFavorites(){
@@ -4112,6 +4216,77 @@
     try{
       localStorage.setItem("p2pkb_favorites", JSON.stringify(Array.from(state.favorites)));
     }catch(e){ /* storage unavailable — favorites just won't persist */ }
+  }
+
+
+  // ---------- Telegram user + theme ----------
+  var tg = window.Telegram && window.Telegram.WebApp;
+
+  // Real Telegram launch (as opposed to a plain browser where the SDK
+  // exists but carries only defaults like colorScheme "light").
+  function inTelegram(){
+    try{
+      return !!(tg && (tg.initData || (tg.platform && tg.platform !== "unknown") ||
+                       (tg.themeParams && tg.themeParams.bg_color)));
+    }catch(e){ return false; }
+  }
+  function tgUser(){
+    try{ return (inTelegram() && tg.initDataUnsafe && tg.initDataUnsafe.user) || null; }
+    catch(e){ return null; }
+  }
+
+  // "auto" = follow Telegram's own theme (or the system one outside Telegram)
+  var THEME_ORDER = ["auto", "light", "dark"];
+  function loadTheme(){
+    try{
+      var v = localStorage.getItem("p2pkb_theme");
+      if(v === "light" || v === "dark" || v === "auto") return v;
+    }catch(e){}
+    return "auto";
+  }
+  function saveTheme(v){
+    try{ localStorage.setItem("p2pkb_theme", v); }catch(e){}
+  }
+  function effectiveTheme(){
+    if(state.theme === "light" || state.theme === "dark") return state.theme;
+    if(inTelegram() && tg.colorScheme) return tg.colorScheme;
+    return null; // no attribute -> prefers-color-scheme decides
+  }
+  function syncThemeSeg(){
+    var seg = document.getElementById("themeSeg");
+    if(!seg) return;
+    var ind = seg.querySelector(".theme-ind");
+    if(ind) ind.style.transform = "translateX(" + (THEME_ORDER.indexOf(state.theme) * 100) + "%)";
+    Array.prototype.forEach.call(seg.querySelectorAll(".theme-btn"), function(b){
+      b.classList.toggle("active", b.getAttribute("data-theme-mode") === state.theme);
+    });
+  }
+  function applyTheme(){
+    var root = document.documentElement;
+    var eff = effectiveTheme();
+    if(eff) root.setAttribute("data-theme", eff);
+    else root.removeAttribute("data-theme");
+    try{
+      // keep the area behind the page (overscroll) in the page's own color
+      if(inTelegram() && tg.setBackgroundColor){
+        tg.setBackgroundColor(getComputedStyle(root).getPropertyValue("--canvas").trim());
+      }
+    }catch(e){}
+    syncThemeSeg();
+  }
+
+  function renderProfile(){
+    var u = tgUser();
+    var name = u ? (u.first_name || u.username || "") : "";
+    document.getElementById("pfHello").textContent = name ? "Привет, " + name : "Привет!";
+    var av = document.getElementById("pfAvatar");
+    av.textContent = (name || "P").charAt(0).toUpperCase();
+    if(u && u.photo_url){
+      var img = new Image();
+      img.alt = "";
+      img.onload = function(){ av.textContent = ""; av.appendChild(img); };
+      img.src = u.photo_url; // on error the initial letter simply stays
+    }
   }
 
   function el(html){
@@ -4316,32 +4491,27 @@
   renderChips();
   renderList();
 
-  // Diagnostics for the Profile tab — shows whether this launch actually
-  // got Telegram's WebApp bridge, so we can tell "no bridge at all" apart
-  // from "bridge present but haptics unsupported/disabled".
-  (function(){
-    var box = document.getElementById("tgDiag");
-    if(!box) return;
-    var lines = [];
-    var tg = window.Telegram && window.Telegram.WebApp;
-    lines.push("Telegram bridge: " + (tg ? "ДА" : "НЕТ (window.Telegram.WebApp не найден)"));
-    if(tg){
-      lines.push("platform: " + tg.platform);
-      lines.push("version: " + tg.version);
-      lines.push("isExpanded: " + tg.isExpanded);
-      try{
-        lines.push("isVersionAtLeast(6.1): " + (tg.isVersionAtLeast ? tg.isVersionAtLeast("6.1") : "n/a"));
-      }catch(e){ lines.push("isVersionAtLeast error: " + e.message); }
-      lines.push("HapticFeedback object: " + (tg.HapticFeedback ? "есть" : "нет"));
-      if(tg.HapticFeedback){
-        lines.push("impactOccurred: " + (typeof tg.HapticFeedback.impactOccurred));
-        lines.push("selectionChanged: " + (typeof tg.HapticFeedback.selectionChanged));
-      }
-      lines.push("TelegramWebviewProxy: " + (window.TelegramWebviewProxy ? "есть" : "нет"));
-      lines.push("window.external.notify: " + (window.external && 'notify' in window.external ? "есть" : "нет"));
-      lines.push("isIframe (window.parent!==window): " + (window.parent != null && window.parent !== window));
+  // Profile rows (Избранное / Обучение) and the theme switcher
+  document.getElementById("view-profile").addEventListener("click", function(e){
+    var row = e.target.closest ? e.target.closest(".pf-row") : null;
+    if(row){ switchTab(row.getAttribute("data-go")); return; }
+    var btn = e.target.closest ? e.target.closest(".theme-btn") : null;
+    if(btn){
+      var mode = btn.getAttribute("data-theme-mode");
+      if(mode === state.theme) return;
+      haptic("selection");
+      state.theme = mode;
+      saveTheme(mode);
+      applyTheme();
     }
-    box.textContent = lines.join("\n");
-  })();
+  });
+  try{
+    if(tg && tg.onEvent) tg.onEvent("themeChanged", function(){
+      if(state.theme === "auto") applyTheme();
+    });
+  }catch(e){}
+
+  applyTheme();
+  renderProfile();
 })();
 </script>
