@@ -600,6 +600,30 @@
   .md hr{border:none;height:1px;background:var(--separator);margin:24px 0;}
   .md img{display:block;width:100%;border-radius:var(--radius-md);margin:0 0 16px;}
   .md code{font:500 14px ui-monospace,Menlo,monospace;background:var(--fill);padding:2px 6px;border-radius:5px;}
+  /* ---------- first-run screen ---------- */
+  .onb{position:absolute;inset:0;z-index:100;background:var(--canvas);display:flex;flex-direction:column;
+    padding:calc(var(--sp-4) + env(safe-area-inset-top,0px)) var(--sp-4) calc(var(--sp-5) + env(safe-area-inset-bottom,0px));overflow-y:auto;
+    transition:opacity .35s ease,transform .45s cubic-bezier(.22,1,.36,1);}
+  .onb[hidden]{display:none;}
+  .onb.out{opacity:0;transform:translateY(24px);pointer-events:none;}
+  .onb-cover{border-radius:var(--radius-lg);aspect-ratio:2.2/1;margin-top:var(--sp-3);display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(120deg,#ffe9d6 0%,#f4dcf3 38%,#dde3fb 68%,#d8f3ea 100%);}
+  .onb-cover .app-mark{margin:0;width:64px;height:64px;font-size:17px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.18);}
+  .onb h1{font:700 30px/1.15 'Inter',sans-serif;letter-spacing:-.02em;text-align:center;color:var(--fg);margin:var(--sp-6,28px) 0 var(--sp-2);}
+  .onb-sub{font:400 16px/1.5 'Inter',sans-serif;text-align:center;color:var(--fg-secondary);margin:0 var(--sp-3) var(--sp-5);}
+  .consent{display:flex;align-items:center;gap:14px;width:100%;padding:16px;margin-bottom:10px;background:var(--elevated);border:none;border-radius:var(--radius-md);
+    box-shadow:var(--shadow-card);cursor:pointer;text-align:left;font:500 16px 'Inter',sans-serif;color:var(--fg);}
+  .consent-dot{width:28px;height:28px;border-radius:50%;flex-shrink:0;background:var(--fill);box-shadow:inset 0 0 0 1px var(--separator);display:flex;align-items:center;justify-content:center;transition:background .2s ease;}
+  .consent-dot svg{width:15px;height:15px;color:var(--canvas);stroke-width:3;opacity:0;transform:scale(.4);transition:opacity .15s ease,transform .3s cubic-bezier(.3,1.6,.4,1);}
+  .consent.on .consent-dot{background:var(--fg);}
+  .consent.on .consent-dot svg{opacity:1;transform:none;}
+  .onb-spacer{flex:1;min-height:24px;}
+  .onb-hint{font:400 13px 'Inter',sans-serif;text-align:center;color:var(--fg-tertiary);margin-top:12px;}
+  .onb .buy-btn:disabled{opacity:.4;cursor:default;}
+  .sw{position:relative;width:51px;height:31px;border-radius:16px;background:var(--fill);box-shadow:inset 0 0 0 1px var(--separator);flex-shrink:0;transition:background .25s ease;}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:var(--fg-secondary);transition:transform .3s cubic-bezier(.3,1.4,.4,1),background .25s ease;}
+  .pf-row.on .sw{background:var(--fg);}
+  .pf-row.on .sw::after{transform:translateX(20px);background:var(--canvas);}
 </style>
 
 <!-- icon library -->
@@ -724,6 +748,15 @@
       <div class="prod-list" id="prodList"></div>
     </section>
     <div class="toast" id="toast"></div>
+    <div class="onb" id="onb" hidden>
+      <div class="onb-cover"><div class="app-mark">P2P</div></div>
+      <h1>Добро пожаловать</h1>
+      <p class="onb-sub">База знаний по P2P арбитражу. Материалы, разборы и обучение в одном месте.</p>
+      <div id="consents"></div>
+      <div class="onb-spacer"></div>
+      <button class="buy-btn" id="onbGo" style="margin:0">Продолжить</button>
+      <div class="onb-hint" id="onbHint">Изменить можно в профиле</div>
+    </div>
 
     <!-- FAVORITES -->
     <section class="view" id="view-favorites">
@@ -761,6 +794,17 @@
           </button>
         </div>
 
+        <div class="pf-group" style="margin-top:var(--sp-4)">
+          <button class="pf-row" id="notifyRow">
+            <span class="pf-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span>
+            <span class="pf-txt">
+              <div class="pf-title">Новые материалы</div>
+              <div class="pf-desc">сообщения от бота о публикациях</div>
+            </span>
+            <span class="sw"></span>
+          </button>
+        </div>
+
         <div class="pf-label">Оформление</div>
         <div class="theme-seg" id="themeSeg">
           <span class="theme-ind"></span>
@@ -768,7 +812,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 05.10 articles</div>
+        <div class="pf-build">сборка 05.10 onboarding</div>
       </div>
     </section>
 
@@ -4753,6 +4797,65 @@
 
   applyTheme();
   renderProfile();
+
+
+  // ===== first run: consents + preferences (kept in localStorage and Telegram CloudStorage) =====
+  // To bring back a legal checkbox (оферта, персональные данные) add an item with required:true.
+  var CONSENTS = [
+    {id:"news", label:"Сообщения о новых материалах", required:false, def:true}
+  ];
+  var PREF_KEY = "p2pkb_prefs_v1";
+  var prefs = {onboarded:false, news:true};
+  function savePrefs(){
+    var j = JSON.stringify(prefs);
+    try{ localStorage.setItem(PREF_KEY, j); }catch(e){}
+    try{ if(tg && tg.CloudStorage && inTelegram() && tg.isVersionAtLeast("6.9")) tg.CloudStorage.setItem(PREF_KEY, j); }catch(e){}
+  }
+  function loadPrefsLocal(){
+    try{ var j = localStorage.getItem(PREF_KEY); if(j) Object.assign(prefs, JSON.parse(j)); return !!j; }catch(e){ return false; }
+  }
+  function syncNotifyRow(){ var r=document.getElementById("notifyRow"); if(r) r.classList.toggle("on", !!prefs.news); }
+  function startOnboarding(){
+    var box=document.getElementById("onb"), list=document.getElementById("consents"), go=document.getElementById("onbGo");
+    var on={}; CONSENTS.forEach(function(c){ on[c.id]=!!c.def; });
+    function draw(){
+      list.innerHTML = CONSENTS.map(function(c){
+        return '<button class="consent'+(on[c.id]?' on':'')+'" data-c="'+c.id+'"><span class="consent-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>'+c.label+'</span></button>';
+      }).join("");
+      var ok = CONSENTS.every(function(c){ return !c.required || on[c.id]; });
+      go.disabled = !ok;
+      document.getElementById("onbHint").textContent = ok ? "Изменить можно в профиле" : "Отметьте обязательные пункты выше";
+    }
+    list.onclick = function(e){ var b=e.target.closest(".consent"); if(!b) return; haptic("selection"); var id=b.getAttribute("data-c"); on[id]=!on[id]; draw(); };
+    go.onclick = function(){
+      haptic("success");
+      prefs.onboarded = true; prefs.news = !!on.news; savePrefs(); syncNotifyRow();
+      box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450);
+    };
+    draw(); box.hidden = false;
+  }
+  function bootPrefs(){
+    var local = loadPrefsLocal();
+    syncNotifyRow();
+    if(local && prefs.onboarded) return;
+    var cs = null;
+    try{ if(tg && tg.CloudStorage && inTelegram() && tg.isVersionAtLeast("6.9")) cs = tg.CloudStorage; }catch(e){}
+    if(!cs){ startOnboarding(); return; }
+    var done=false;
+    var t=setTimeout(function(){ if(!done){ done=true; startOnboarding(); } }, 600);
+    cs.getItem(PREF_KEY, function(err, v){
+      if(done) return; done=true; clearTimeout(t);
+      if(!err && v){ try{ Object.assign(prefs, JSON.parse(v)); }catch(e){} }
+      syncNotifyRow();
+      if(prefs.onboarded){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }catch(e){} } else startOnboarding();
+    });
+  }
+  document.getElementById("notifyRow").addEventListener("click", function(){
+    haptic("selection"); prefs.news = !prefs.news; savePrefs(); syncNotifyRow();
+    toast(prefs.news ? "Будем сообщать о новых материалах" : "Сообщения отключены");
+  });
+
+  bootPrefs();
 
   // Content lives in /content/*.json so it can be edited without touching the code.
   function loadContent(){
