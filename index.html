@@ -534,6 +534,14 @@
   .search-field{will-change:width;}
   /* the blur is the costly part: drop it while the field resizes */
   .search-wrap.anim .search-input{-webkit-backdrop-filter:none;backdrop-filter:none;}
+  /* search extras */
+  mark{background:color-mix(in srgb,var(--fg) 20%,transparent);color:inherit;border-radius:3px;padding:0 1px;}
+  .card-hit{margin-top:8px;font:400 13px/1.4 'Inter',sans-serif;color:var(--fg-secondary);display:flex;gap:6px;align-items:baseline;}
+  .card-hit b{font-weight:600;color:var(--fg-tertiary);font-size:11px;letter-spacing:.04em;text-transform:uppercase;flex-shrink:0;}
+  .empty-btn{display:inline-block;margin-top:14px;padding:9px 18px;border-radius:var(--radius-pill);border:none;background:var(--fill);color:var(--fg);font:500 14px 'Inter',sans-serif;cursor:pointer;}
+  .empty-q{color:var(--fg);font-weight:600;word-break:break-word;}
+  .tabbar{transition:transform .45s cubic-bezier(.22,1,.36,1),opacity .3s ease;}
+  .app.kb .tabbar{transform:translate3d(0,150%,0);opacity:0;pointer-events:none;}
 </style>
 
 <!-- icon library -->
@@ -643,7 +651,7 @@
       </div>
       <div class="seg" id="chips"></div>
       <div class="card-list" id="cardList"></div>
-      <div class="empty" id="emptyState" hidden>Ничего не нашлось. Попробуйте другой запрос или раздел.</div>
+      <div class="empty" id="emptyState" hidden></div>
     </section>
 
     <!-- DETAIL -->
@@ -701,7 +709,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 05.10 smooth</div>
+        <div class="pf-build">сборка 05.10 search2</div>
       </div>
     </section>
 
@@ -4385,12 +4393,14 @@
     }
   };
 
-  function cardHTML(s){
+  function cardHTML(s,q){
+    q = (typeof q==='string' && q) ? q : '';
     var mock = (THUMB_PATTERNS[s.id] || THUMB_PATTERNS.base)(s);
     return (
       '<article class="card" data-id="'+s.id+'">'+
-        '<div class="card-title">'+s.title+'</div>'+
-        '<div class="card-desc">'+s.desc+'</div>'+
+        '<div class="card-title">'+(q?hl(s.title,q):s.title)+'</div>'+
+        '<div class="card-desc">'+(q?hl(s.desc,q):s.desc)+'</div>'+
+        (q && s.title.toLowerCase().indexOf(q)===-1 && s.desc.toLowerCase().indexOf(q)===-1 && outlineHit(s,q) ? '<div class="card-hit"><b>В разделе</b><span>'+hl(outlineHit(s,q),q)+'</span></div>' : '')+
         '<div class="card-thumb '+s.id+'">'+
           '<div class="thumb-eyebrow">'+CATEGORY_LABEL[s.category]+'</div>'+
           '<div class="thumb-title">'+s.title+'</div>'+
@@ -4421,16 +4431,39 @@
   function matches(s){
     var inCat = state.category === "all" || s.category === state.category;
     var q = state.query.trim().toLowerCase();
-    var inQuery = !q || s.title.toLowerCase().indexOf(q) !== -1 || s.desc.toLowerCase().indexOf(q) !== -1;
-    return inCat && inQuery;
+    return inCat && (!q || hitIn(s,q));
+  }
+  function hitIn(s,q){
+    return s.title.toLowerCase().indexOf(q)!==-1 || s.desc.toLowerCase().indexOf(q)!==-1 || outlineHit(s,q)!==null;
+  }
+  function outlineHit(s,q){
+    var o=s.outline||[];
+    for(var i=0;i<o.length;i++){ if(o[i].toLowerCase().indexOf(q)!==-1) return o[i]; }
+    return null;
+  }
+  function esc(t){ return String(t).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+  function hl(t,q){
+    if(!q) return t;
+    var i=t.toLowerCase().indexOf(q);
+    if(i===-1) return t;
+    return esc(t.slice(0,i))+"<mark>"+esc(t.slice(i,i+q.length))+"</mark>"+hl(t.slice(i+q.length),q).replace(/^/,"");
   }
 
   function renderList(){
     var list = SECTIONS.filter(matches);
     var box = document.getElementById("cardList");
     var empty = document.getElementById("emptyState");
-    box.innerHTML = list.map(cardHTML).join("");
+    var q = state.query.trim().toLowerCase();
+    box.innerHTML = list.map(function(s){ return cardHTML(s,q); }).join("");
     empty.hidden = list.length !== 0;
+    if(list.length===0){
+      var cat = state.category!=="all";
+      empty.innerHTML = q
+        ? 'Ничего не найдено по запросу <span class="empty-q">«'+esc(state.query.trim())+'»</span>.<br>Проверьте написание или попробуйте другое слово.'+(cat?'<br><button class="empty-btn" id="emptyReset">Искать во всех разделах</button>':'')
+        : 'В этой категории пока ничего нет.<br><button class="empty-btn" id="emptyReset">Показать все</button>';
+      var rb=document.getElementById("emptyReset");
+      if(rb) rb.addEventListener("click", function(){ haptic("selection"); state.category="all"; renderChips(); renderList(); });
+    }
     Array.prototype.forEach.call(box.querySelectorAll(".card"), function(cardEl){
       cardEl.addEventListener("click", function(){
         openDetail(cardEl.getAttribute("data-id"));
@@ -4559,6 +4592,16 @@
     inp.addEventListener("input", function(e){ state.query=e.target.value; sync(); renderList(); });
     var animT;
     function setFocused(on){ if(wrap.classList.contains("focused")===on) return; wrap.classList.add("anim"); wrap.classList.toggle("focused",on); clearTimeout(animT); animT=setTimeout(function(){ wrap.classList.remove("anim"); },520); }
+    var appEl=document.getElementById("app");
+    var focusAt=0;
+    inp.addEventListener("focus", function(){ focusAt=Date.now(); appEl.classList.add("kb"); });
+    inp.addEventListener("blur", function(){ appEl.classList.remove("kb"); });
+    var body=document.querySelector(".app-body"), lastY=0;
+    body.addEventListener("scroll", function(){
+      var y=body.scrollTop;
+      if(document.activeElement===inp && Date.now()-focusAt>700 && Math.abs(y-lastY)>8) inp.blur();
+      lastY=y;
+    },{passive:true});
     inp.addEventListener("focus", function(){ setFocused(true); });
     inp.addEventListener("blur", function(){ setTimeout(function(){ if(!inp.value) setFocused(false); },120); });
     inp.addEventListener("keydown", function(e){ if(e.key==="Enter") inp.blur(); });
