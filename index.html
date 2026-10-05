@@ -816,7 +816,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 05.10 splash</div>
+        <div class="pf-build">сборка 05.10 haptics</div>
       </div>
     </section>
 
@@ -4462,7 +4462,7 @@
       var chip = el('<button class="seg-btn'+(state.category===c.id?' active':'')+'" data-cat="'+c.id+'">'+c.label+'</button>');
       chip.addEventListener("click", function(){
         if(state.category === c.id) return;
-        haptic("selection");
+        haptic("impact-light");
         state.category = c.id;
         renderChips();
         renderList();
@@ -4853,11 +4853,12 @@
       go.disabled = !ok;
       document.getElementById("onbHint").textContent = ok ? "Изменить можно в профиле" : "Отметьте обязательные пункты выше";
     }
-    list.onclick = function(e){ var b=e.target.closest(".consent"); if(!b) return; haptic("selection"); var id=b.getAttribute("data-c"); on[id]=!on[id]; draw(); };
+    list.onclick = function(e){ var b=e.target.closest(".consent"); if(!b) return; haptic("impact-light"); var id=b.getAttribute("data-c"); on[id]=!on[id]; draw(); };
     go.onclick = function(){
-      haptic("success");
+      haptic("impact-medium");
       prefs.onboarded = true; prefs.news = !!on.news; savePrefs(); syncNotifyRow();
       splashState.shown = true; box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450);
+      setTimeout(function(){ haptic("success"); }, 260);   // one-time confirmation as the app opens
     };
     draw(); box.hidden = false; box.classList.remove("pending");
   }
