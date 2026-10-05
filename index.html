@@ -607,6 +607,8 @@
     padding:calc(var(--sp-4) + env(safe-area-inset-top,0px)) var(--sp-4) calc(var(--sp-5) + env(safe-area-inset-bottom,0px));overflow-y:auto;
     transition:opacity .35s ease,transform .45s cubic-bezier(.22,1,.36,1);}
   .onb[hidden]{display:none;}
+  .onb > *{transition:opacity .3s ease;}
+  .onb.pending > *{opacity:0;}
   .onb.out{opacity:0;transform:translateY(24px);pointer-events:none;}
   .onb-cover{border-radius:var(--radius-lg);aspect-ratio:2.2/1;margin-top:var(--sp-3);display:flex;align-items:center;justify-content:center;
     background:linear-gradient(120deg,#ffe9d6 0%,#f4dcf3 38%,#dde3fb 68%,#d8f3ea 100%);}
@@ -750,7 +752,7 @@
       <div class="prod-list" id="prodList"></div>
     </section>
     <div class="toast" id="toast"></div>
-    <div class="onb" id="onb" hidden>
+    <div class="onb pending" id="onb">
       <div class="onb-cover"><div class="app-mark">P2P</div></div>
       <h1>Добро пожаловать</h1>
       <p class="onb-sub">База знаний по P2P арбитражу. Материалы, разборы и обучение в одном месте.</p>
@@ -814,7 +816,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 05.10 share</div>
+        <div class="pf-build">сборка 05.10 splash</div>
       </div>
     </section>
 
@@ -4855,14 +4857,25 @@
     go.onclick = function(){
       haptic("success");
       prefs.onboarded = true; prefs.news = !!on.news; savePrefs(); syncNotifyRow();
-      box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450);
+      splashState.shown = true; box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450);
     };
-    draw(); box.hidden = false;
+    draw(); box.hidden = false; box.classList.remove("pending");
   }
+  // The splash (#onb in its "pending" state) covers the app until we know what to show,
+  // so the materials never flash before the welcome screen.
+  var splashState = {prefs:false, content:false, shown:false};
+  function revealApp(){
+    if(splashState.shown) return;
+    if(!(splashState.prefs && splashState.content)) return;
+    splashState.shown = true;
+    var box=document.getElementById("onb");
+    box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450);
+  }
+  setTimeout(function(){ splashState.content = true; revealApp(); }, 1500);   // safety net
   function bootPrefs(){
     var local = loadPrefsLocal();
     syncNotifyRow();
-    if(local && prefs.onboarded) return;
+    if(local && prefs.onboarded){ splashState.prefs = true; revealApp(); return; }
     var cs = null;
     try{ if(tg && tg.CloudStorage && inTelegram() && tg.isVersionAtLeast("6.9")) cs = tg.CloudStorage; }catch(e){}
     if(!cs){ startOnboarding(); return; }
@@ -4872,7 +4885,7 @@
       if(done) return; done=true; clearTimeout(t);
       if(!err && v){ try{ Object.assign(prefs, JSON.parse(v)); }catch(e){} }
       syncNotifyRow();
-      if(prefs.onboarded){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }catch(e){} } else startOnboarding();
+      if(prefs.onboarded){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }catch(e){} splashState.prefs = true; revealApp(); } else startOnboarding();
     });
   }
   document.getElementById("notifyRow").addEventListener("click", function(){
@@ -4901,7 +4914,9 @@
     }).then(function(){
       renderChips(); renderList(); renderFavorites(); renderLearning();
       openFromStartParam();
+      splashState.content = true; revealApp();
     }).catch(function(){
+      splashState.content = true; revealApp();
       var box = document.getElementById("cardList");
       box.innerHTML = '<div class="empty">Не удалось загрузить материалы.<br>Проверьте интернет и перезагрузите страницу.<br><button class="empty-btn" onclick="location.reload()">Обновить</button></div>';
     });
