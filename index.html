@@ -523,14 +523,17 @@
   .search-clear svg{position:static;transform:none;width:10px;height:10px;color:var(--canvas);stroke-width:3;}
   .search-wrap{gap:0;}
   .search-wrap.has-text .search-clear{display:flex;}
-  /* "water drop" spring: the field squeezes, the button grows out of its edge with overshoot */
+  /* "water drop": layout props use a smooth ease (no overshoot = no jitter); the spring lives on transform only (GPU) */
+  .search-wrap{contain:layout paint;padding:2px 0;margin:-2px 0 calc(var(--sp-3) - 2px);}
   .search-cancel{display:block;flex-shrink:0;overflow:hidden;max-width:0;margin-left:0;opacity:0;
-    transform:translateX(-14px) scale(.6);transform-origin:left center;pointer-events:none;
+    transform:translate3d(-16px,0,0) scale(.7);transform-origin:left center;pointer-events:none;will-change:transform,opacity,max-width;
     font:400 16px 'Inter',sans-serif;color:var(--fg);background:none;border:none;padding:0;white-space:nowrap;cursor:pointer;
-    transition:max-width .5s cubic-bezier(.34,1.45,.5,1),margin-left .5s cubic-bezier(.34,1.45,.5,1),
-      transform .5s cubic-bezier(.34,1.7,.5,1),opacity .22s ease;}
-  .search-wrap.focused .search-cancel{max-width:90px;margin-left:12px;opacity:1;transform:none;pointer-events:auto;}
-  .search-input{transition:background .2s ease,box-shadow .2s ease,border-radius .5s cubic-bezier(.34,1.45,.5,1);}
+    transition:max-width .44s cubic-bezier(.22,1,.36,1),margin-left .44s cubic-bezier(.22,1,.36,1),
+      transform .6s cubic-bezier(.34,1.5,.5,1),opacity .25s ease;}
+  .search-wrap.focused .search-cancel{max-width:72px;margin-left:12px;opacity:1;transform:translate3d(0,0,0);pointer-events:auto;}
+  .search-field{will-change:width;}
+  /* the blur is the costly part: drop it while the field resizes */
+  .search-wrap.anim .search-input{-webkit-backdrop-filter:none;backdrop-filter:none;}
 </style>
 
 <!-- icon library -->
@@ -698,7 +701,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 05.10 drop</div>
+        <div class="pf-build">сборка 05.10 smooth</div>
       </div>
     </section>
 
@@ -4554,12 +4557,14 @@
     function sync(){ wrap.classList.toggle("has-text", !!inp.value); }
     function setQuery(v){ inp.value=v; state.query=v; sync(); renderList(); }
     inp.addEventListener("input", function(e){ state.query=e.target.value; sync(); renderList(); });
-    inp.addEventListener("focus", function(){ wrap.classList.add("focused"); });
-    inp.addEventListener("blur", function(){ setTimeout(function(){ if(!inp.value) wrap.classList.remove("focused"); },120); });
+    var animT;
+    function setFocused(on){ if(wrap.classList.contains("focused")===on) return; wrap.classList.add("anim"); wrap.classList.toggle("focused",on); clearTimeout(animT); animT=setTimeout(function(){ wrap.classList.remove("anim"); },520); }
+    inp.addEventListener("focus", function(){ setFocused(true); });
+    inp.addEventListener("blur", function(){ setTimeout(function(){ if(!inp.value) setFocused(false); },120); });
     inp.addEventListener("keydown", function(e){ if(e.key==="Enter") inp.blur(); });
     document.getElementById("searchClear").addEventListener("mousedown", function(e){ e.preventDefault(); });
     document.getElementById("searchClear").addEventListener("click", function(){ haptic("light"); setQuery(""); inp.focus(); });
-    document.getElementById("searchCancel").addEventListener("click", function(){ haptic("light"); setQuery(""); wrap.classList.remove("focused"); inp.blur(); });
+    document.getElementById("searchCancel").addEventListener("click", function(){ haptic("light"); setQuery(""); setFocused(false); inp.blur(); });
   })();
 
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(btn){
