@@ -512,11 +512,11 @@
   .search-field{position:relative;flex:1;min-width:0;}
   .search-field svg{left:15px;width:18px;height:18px;}
   .search-input{height:44px;font-size:16px;padding:0 42px 0 44px;
-    background:color-mix(in srgb,var(--fg) 9%,transparent);
+    background:color-mix(in srgb,var(--fg) 9%,var(--canvas));
     -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
     box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--fg) 14%,transparent),inset 0 1px 0 color-mix(in srgb,var(--fg) 8%,transparent);
     transition:background .2s ease,box-shadow .2s ease;}
-  .search-input:focus{background:color-mix(in srgb,var(--fg) 12%,transparent);
+  .search-input:focus{background:color-mix(in srgb,var(--fg) 12%,var(--canvas));
     box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--fg) 22%,transparent);}
   .search-clear{position:absolute;right:11px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;
     background:color-mix(in srgb,var(--fg) 38%,transparent);color:var(--canvas);display:none;align-items:center;justify-content:center;padding:0;cursor:pointer;}
@@ -524,7 +524,13 @@
   .search-wrap{gap:0;}
   .search-wrap.has-text .search-clear{display:flex;}
   /* "water drop": layout props use a smooth ease (no overshoot = no jitter); the spring lives on transform only (GPU) */
-  .search-wrap{contain:layout paint;padding:2px 0;margin:-2px 0 calc(var(--sp-3) - 2px);}
+  /* pinned: stays at the top while the list scrolls under it (cards fade out beneath) */
+  .search-wrap{position:sticky;top:calc(-1*(var(--sp-4) + env(safe-area-inset-top,0px)));z-index:6;
+    margin:calc(-1*(var(--sp-4) + env(safe-area-inset-top,0px))) calc(-1*var(--sp-4)) 0;
+    padding:calc(var(--sp-4) + env(safe-area-inset-top,0px)) var(--sp-4) 14px;
+    background:linear-gradient(var(--canvas) 80%,color-mix(in srgb,var(--canvas) 0%,transparent));}
+  .search-field svg.mag{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--fg-secondary);pointer-events:none;z-index:2;}
+  .search-input{padding-left:41px;}
   .search-cancel{display:block;flex-shrink:0;overflow:hidden;max-width:0;margin-left:0;opacity:0;
     transform:translate3d(-16px,0,0) scale(.7);transform-origin:left center;pointer-events:none;will-change:transform,opacity,max-width;
     font:400 16px 'Inter',sans-serif;color:var(--fg);background:none;border:none;padding:0;white-space:nowrap;cursor:pointer;
@@ -643,7 +649,7 @@
     <section class="view active" id="view-list">
       <div class="search-wrap">
         <div class="search-field">
-          <svg viewBox="0 0 24 24"><use href="#i-search"/></svg>
+          <svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4L20.5 20.5"/></svg>
           <input class="search-input" id="searchInput" placeholder="Поиск по материалам" autocomplete="off" enterkeyhint="search">
           <button class="search-clear" id="searchClear" aria-label="Очистить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
         </div>
@@ -709,7 +715,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 05.10 search2</div>
+        <div class="pf-build">сборка 05.10 search3</div>
       </div>
     </section>
 
