@@ -607,6 +607,10 @@
     padding:calc(var(--sp-4) + env(safe-area-inset-top,0px)) var(--sp-4) calc(var(--sp-5) + env(safe-area-inset-bottom,0px));overflow-y:auto;
     transition:opacity .35s ease,transform .45s cubic-bezier(.22,1,.36,1);}
   .onb[hidden]{display:none;}
+  .boot-mark{position:absolute;inset:0;z-index:101;display:flex;align-items:center;justify-content:center;pointer-events:none;transition:opacity .3s ease;}
+  .boot-mark .app-mark{margin:0;width:64px;height:64px;font-size:17px;border-radius:20px;animation:bootpulse 1.1s ease-in-out infinite;}
+  @keyframes bootpulse{0%,100%{transform:scale(.94);opacity:.75}50%{transform:scale(1.04);opacity:1}}
+  .onb:not(.pending) ~ .boot-mark,.onb.out ~ .boot-mark,.onb[hidden] ~ .boot-mark{opacity:0;}
   .onb > *{transition:opacity .3s ease;}
   .onb.pending > *{opacity:0;}
   .onb.out{opacity:0;transform:translateY(24px);pointer-events:none;}
@@ -761,6 +765,7 @@
       <button class="buy-btn" id="onbGo" style="margin:0">Продолжить</button>
       <div class="onb-hint" id="onbHint">Изменить можно в профиле</div>
     </div>
+    <div class="boot-mark"><div class="app-mark">P2P</div></div>
 
     <!-- FAVORITES -->
     <section class="view" id="view-favorites">
@@ -816,7 +821,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 05.10 haptics</div>
+        <div class="pf-build">сборка 05.10 launch</div>
       </div>
     </section>
 
@@ -4272,6 +4277,7 @@
         else if(kind === "success") hf.notificationOccurred("success");
         else if(kind === "impact-soft") hf.impactOccurred("soft");
         else if(kind === "impact-medium") hf.impactOccurred("medium");
+        else if(kind === "impact-heavy") hf.impactOccurred("heavy");
         else hf.impactOccurred("light");
         return;
       }
@@ -4864,15 +4870,27 @@
   }
   // The splash (#onb in its "pending" state) covers the app until we know what to show,
   // so the materials never flash before the welcome screen.
-  var splashState = {prefs:false, content:false, shown:false};
+  var splashState = {prefs:false, content:false, minDone:false, shown:false};
   function revealApp(){
     if(splashState.shown) return;
-    if(!(splashState.prefs && splashState.content)) return;
+    if(!(splashState.prefs && splashState.content && splashState.minDone)) return;
     splashState.shown = true;
     var box=document.getElementById("onb");
     box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450);
   }
   setTimeout(function(){ splashState.content = true; revealApp(); }, 1500);   // safety net
+  // Launch haptics: a short rising rumble while the app starts (soft -> heavy), like a
+  // loading "spin-up". Stops as soon as the app is revealed.
+  var rampTimer = null;
+  setTimeout(function(){ splashState.minDone = true; revealApp(); }, 650);   // let the launch rumble play out
+  function startLaunchRamp(){
+    var seq = ["impact-soft","impact-soft","impact-light","impact-light","impact-medium","impact-medium","impact-heavy"], i = 0;
+    haptic(seq[i++]);
+    rampTimer = setInterval(function(){
+      if(i >= seq.length){ clearInterval(rampTimer); return; }
+      haptic(seq[i++]);
+    }, 85);
+  }
   function bootPrefs(){
     var local = loadPrefsLocal();
     syncNotifyRow();
@@ -4894,6 +4912,7 @@
     toast(prefs.news ? "Будем сообщать о новых материалах" : "Сообщения отключены");
   });
 
+  startLaunchRamp();
   bootPrefs();
 
   // Content lives in /content/*.json so it can be edited without touching the code.
