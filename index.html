@@ -355,6 +355,8 @@
   }
   .btn-icon svg{width:16px;height:16px;stroke-width:2;}
   .detail-title{font:700 24px/1.25 'Inter',sans-serif;letter-spacing:-0.02em;color:var(--fg);flex:1;}
+  .detail-head .btn-icon{background:none;}
+  .detail-head .btn-icon:first-child{background:var(--fill);}
   .star-btn{background:none;width:40px;height:40px;margin-right:-8px;}
   .star-btn svg{width:24px;height:24px;stroke-width:1.8;color:var(--fg-secondary);transition:color .15s ease;}
   .star-btn.active svg{color:var(--fg);--star-fill:currentColor;}
@@ -812,7 +814,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 05.10 onboarding</div>
+        <div class="pf-build">сборка 05.10 share</div>
       </div>
     </section>
 
@@ -4525,6 +4527,25 @@
   }
   function readMins(md){ return Math.max(1, Math.round(md.split(/\s+/).length/170)); }
 
+
+  var BOT_USERNAME = "ptp_study_bot";
+  function shareLink(id){ return "https://t.me/"+BOT_USERNAME+(id?"?startapp="+encodeURIComponent(id):""); }
+  function shareSection(s){
+    haptic("impact-light");
+    var url = "https://t.me/share/url?url="+encodeURIComponent(shareLink(s.id))+"&text="+encodeURIComponent(s.title+"\n"+s.desc);
+    try{ if(tg && tg.openTelegramLink && inTelegram()) { tg.openTelegramLink(url); return; } }catch(e){}
+    try{ navigator.clipboard.writeText(shareLink(s.id)); toast("Ссылка скопирована"); }catch(e){ window.open(url,"_blank"); }
+  }
+  var SHARE_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>';
+  function openFromStartParam(){
+    try{
+      var sp = tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param;
+      if(!sp) return;
+      if(SECTIONS.some(function(x){ return x.id===sp; })){ state.tab="list"; openDetail(sp); }
+      else if(PRODUCTS.some(function(x){ return x.id===sp; })){ switchTab("learning"); openProduct(sp); }
+    }catch(e){}
+  }
+
   function renderList(){
     var list = SECTIONS.filter(matches);
     var box = document.getElementById("cardList");
@@ -4571,6 +4592,7 @@
     if(s._md){
       view.innerHTML =
         '<div class="detail-head"><button class="btn-icon" id="backBtn"><svg viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg></button><div style="flex:1"></div>'+
+        '<button class="btn-icon" id="shareBtn">'+SHARE_SVG+'</button>'+
         '<button class="btn-icon star-btn'+(isFav?' active':'')+'" id="starBtn"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></button></div>'+
         (s.cover ? '<img class="art-cover" src="'+s.cover+'" alt="">' : '')+
         '<div class="art-row"><span class="badge '+s.category+'">'+CATEGORY_LABEL[s.category]+'</span></div>'+
@@ -4579,6 +4601,7 @@
         '<p class="art-lead">'+s.desc+'</p>'+
         '<div class="md">'+mdRender(s._md)+'</div>';
       document.getElementById("backBtn").addEventListener("click", closeDetail);
+      document.getElementById("shareBtn").addEventListener("click", function(){ shareSection(s); });
       var sb=document.getElementById("starBtn"); sb.classList.toggle("active", isFav);
       sb.addEventListener("click", function(){ toggleFavorite(id); this.classList.toggle("active", state.favorites.has(id)); });
       Array.prototype.forEach.call(view.querySelectorAll("a[data-ext]"), function(a){
@@ -4592,6 +4615,7 @@
       '<div class="detail-head">'+
         '<button class="btn-icon" id="backBtn"><svg viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg></button>'+
         '<div class="detail-title">'+s.title+'</div>'+
+        '<button class="btn-icon" id="shareBtn">'+SHARE_SVG+'</button>'+
         '<button class="btn-icon star-btn'+(isFav?' active':'')+'" id="starBtn"><svg viewBox="0 0 24 24" fill="'+(isFav?'currentColor':'none')+'"><use href="#i-star"/></svg></button>'+
       '</div>'+
       '<div class="detail-tag"><span class="badge '+s.category+'">'+CATEGORY_LABEL[s.category]+'</span></div>'+
@@ -4604,6 +4628,7 @@
       '<div class="note">Материал в разработке. Здесь появится полный текст раздела — пошаговые инструкции, скриншоты и примеры.</div>';
 
     document.getElementById("backBtn").addEventListener("click", closeDetail);
+    document.getElementById("shareBtn").addEventListener("click", function(){ shareSection(s); });
     document.getElementById("starBtn").addEventListener("click", function(){
       toggleFavorite(id);
       var on = state.favorites.has(id);
@@ -4875,6 +4900,7 @@
       }));
     }).then(function(){
       renderChips(); renderList(); renderFavorites(); renderLearning();
+      openFromStartParam();
     }).catch(function(){
       var box = document.getElementById("cardList");
       box.innerHTML = '<div class="empty">Не удалось загрузить материалы.<br>Проверьте интернет и перезагрузите страницу.<br><button class="empty-btn" onclick="location.reload()">Обновить</button></div>';
