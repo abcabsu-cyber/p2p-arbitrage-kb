@@ -747,7 +747,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 05.10 learn</div>
+        <div class="pf-build">сборка 05.10 content</div>
       </div>
     </section>
 
@@ -4212,76 +4212,10 @@
     }catch(e){ /* unsupported — the press animation still carries the feel */ }
   }
 
-  var CATEGORIES = [
-    {id:"all", label:"Все"},
-    {id:"basics", label:"Основы"},
-    {id:"exchange", label:"Биржи"},
-    {id:"security", label:"Безопасность"}
-  ];
-  var CATEGORY_LABEL = {basics:"Основы", exchange:"Биржи", security:"Безопасность"};
+  var CATEGORIES = [];
+  var CATEGORY_LABEL = {};
 
-  var SECTIONS = [
-    {id:"base", title:"База P2P арбитража", category:"basics", icon:"i-layers",
-     desc:"Что такое P2P арбитраж и как устроена эта модель заработка.",
-     outline:["Суть модели: на чём именно зарабатывает P2P арбитражник",
-              "Из каких этапов состоит пайплайн — от аккаунта до сделки",
-              "Какие ресурсы нужны для старта",
-              "Частые заблуждения новичков"]},
-    {id:"reg", title:"Регистрация на биржах", category:"basics", icon:"i-user-plus",
-     desc:"Как правильно зарегистрировать аккаунт и подготовить его к работе.",
-     outline:["Какие данные и документы понадобятся",
-              "Пошаговая регистрация без ошибок",
-              "Типичные причины блокировки на этом этапе",
-              "Как подготовить аккаунт к верификации"]},
-    {id:"exchanges", title:"Выбор биржи", category:"exchange", icon:"i-building",
-     desc:"Актуальные площадки на сегодня и по каким критериям их сравнивать.",
-     outline:["Рейтинг актуальных бирж на сегодняшний день",
-              "На что смотреть: комиссии, лимиты, репутация",
-              "Плюсы и минусы крупных и нишевых площадок",
-              "Когда стоит работать сразу на нескольких биржах"]},
-    {id:"firststeps", title:"Первые шаги", category:"basics", icon:"i-footprints",
-     desc:"Что сделать в первую неделю, чтобы выйти на первую сделку.",
-     outline:["План действий на первые 7 дней",
-              "Как выбрать первую пару и объём сделки",
-              "Что проверить перед первой сделкой",
-              "Разбор первой сделки на реальном примере"]},
-    {id:"status", title:"Статусы аккаунта", category:"exchange", icon:"i-badge-check",
-     desc:"Как получить нужный статус верификации и зачем он нужен.",
-     outline:["Какие статусы бывают и что они дают",
-              "Условия повышения статуса на разных биржах",
-              "Как ускорить получение нужного уровня",
-              "Что делать, если статус не подтверждают"]},
-    {id:"firstad", title:"Первое объявление", category:"exchange", icon:"i-megaphone",
-     desc:"Как составить и разместить первое объявление на покупку или продажу.",
-     outline:["Структура объявления, которое вызывает доверие",
-              "Как выставить курс и лимиты",
-              "Условия сделки: что указать обязательно",
-              "Ошибки, из-за которых объявление игнорируют"]},
-    {id:"buysell", title:"Покупка и продажа крипты", category:"exchange", icon:"i-swap",
-     desc:"Пошаговый разбор сделки от заявки до перевода средств.",
-     outline:["Сценарий сделки шаг за шагом",
-              "Проверка платежа перед подтверждением",
-              "Как закрыть сделку без задержек",
-              "Что делать при спорной ситуации"]},
-    {id:"competition", title:"Разбор конкуренции", category:"exchange", icon:"i-trophy",
-     desc:"Как анализировать других трейдеров и выстраивать позицию на бирже.",
-     outline:["Как читать объявления конкурентов",
-              "На какие детали смотреть в разных биржах",
-              "Как выделиться курсом, условиями, скоростью",
-              "Когда стоит менять стратегию под рынок"]},
-    {id:"security", title:"Безопасность", category:"security", icon:"i-shield",
-     desc:"Как защититься от мошенников и что делать, если уже попался.",
-     outline:["Признаки мошеннической сделки",
-              "Правила, которые снижают риск обмана",
-              "Порядок действий, если сделка пошла не так",
-              "Куда обращаться после попытки мошенничества"]},
-    {id:"support", title:"Диалог с поддержкой", category:"security", icon:"i-messages",
-     desc:"Как переписываться с поддержкой биржи, чтобы решать вопросы быстро.",
-     outline:["Как правильно описать проблему в первом сообщении",
-              "Что приложить, чтобы ускорить ответ",
-              "Как вести себя при эскалации спора",
-              "Шаблоны обращений на частые ситуации"]}
-  ];
+  var SECTIONS = [];
 
   var state = {
     tab: "list",
@@ -4566,28 +4500,7 @@
 
 
   // ===== Обучение: products (PLACEHOLDER content — replace with real products) =====
-  var PRODUCTS = [
-    {id:"club", kind:"community", cover:"g4", eyebrow:"Приватное сообщество", title:"Арбитраж без воздуха: клуб",
-     sub:"Закрытый чат с разбором связок, поддержкой и ежедневной аналитикой рынка.",
-     price:"4 900 ₽", per:"/ месяц",
-     desc:"Закрытое сообщество практиков P2P арбитража. Здесь не теория, а живая работа: связки дня, разбор ошибок, ответы на вопросы.",
-     features:["Закрытый чат участников","Ежедневный разбор связок и спредов","Ответы на вопросы в течение дня","Еженедельные эфиры с разбором","Доступ ко всем материалам клуба"]},
-    {id:"start", kind:"course", cover:"g1", eyebrow:"Курс", title:"Старт в P2P: от нуля до первой связки",
-     sub:"Пошаговая программа для новичков: от регистрации до первой прибыльной сделки.",
-     price:"9 900 ₽", per:"",
-     desc:"Курс для тех, кто начинает с нуля. Проведём по всему пути: биржи, безопасность, первые сделки и работа с рисками.",
-     features:["12 видеоуроков с практикой","Чек-листы и шаблоны объявлений","Разбор типичных ошибок новичков","Поддержка куратора 30 дней"]},
-    {id:"pro", kind:"course", cover:"g2", eyebrow:"Курс", title:"Связки и спреды: продвинутый уровень",
-     sub:"Как находить рабочие связки, считать спред и масштабировать оборот.",
-     price:"19 900 ₽", per:"",
-     desc:"Для тех, кто уже совершал сделки и хочет выйти на стабильный доход: расчёт, автоматизация, масштабирование.",
-     features:["16 уроков и разборы кейсов","Таблицы расчёта спреда","Работа с несколькими биржами","Закрытый чат потока"]},
-    {id:"kit", kind:"course", cover:"g3", eyebrow:"Набор", title:"Набор шаблонов и чек-листов",
-     sub:"Готовые таблицы, скрипты общения с клиентами и чек-листы безопасности.",
-     price:"2 900 ₽", per:"",
-     desc:"Всё, что нужно для ежедневной работы, в одном наборе. Скачайте, подставьте свои данные и работайте.",
-     features:["Таблица учёта сделок","Шаблоны ответов клиентам","Чек-лист безопасности","Обновления набора"]}
-  ];
+  var PRODUCTS = [];
   function toast(msg){
     var t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
     clearTimeout(toast._t); toast._t=setTimeout(function(){ t.classList.remove("show"); },2200);
@@ -4725,8 +4638,6 @@
     });
   });
 
-  renderChips();
-  renderList();
 
   // belt and braces against zoom (iOS gesture events, multi-touch, ctrl+wheel)
   ["gesturestart","gesturechange","gestureend"].forEach(function(t){
@@ -4763,6 +4674,26 @@
 
   applyTheme();
   renderProfile();
-  renderLearning();
+
+  // Content lives in /content/*.json so it can be edited without touching the code.
+  function loadContent(){
+    var opts = {cache:"no-cache"};
+    return Promise.all([
+      fetch("content/materials.json", opts).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch("content/products.json", opts).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    ]).then(function(res){
+      var m = res[0], p = res[1];
+      CATEGORIES.length = 0; Array.prototype.push.apply(CATEGORIES, m.categories);
+      Object.keys(CATEGORY_LABEL).forEach(function(k){ delete CATEGORY_LABEL[k]; });
+      m.categories.forEach(function(c){ if(c.id !== "all") CATEGORY_LABEL[c.id] = c.label; });
+      SECTIONS.length = 0; Array.prototype.push.apply(SECTIONS, m.sections);
+      PRODUCTS.length = 0; Array.prototype.push.apply(PRODUCTS, p.products);
+      renderChips(); renderList(); renderFavorites(); renderLearning();
+    }).catch(function(){
+      var box = document.getElementById("cardList");
+      box.innerHTML = '<div class="empty">Не удалось загрузить материалы.<br>Проверьте интернет и перезагрузите страницу.<br><button class="empty-btn" onclick="location.reload()">Обновить</button></div>';
+    });
+  }
+  loadContent();
 })();
 </script>
