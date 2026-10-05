@@ -506,6 +506,24 @@
   @media (prefers-reduced-motion:no-preference){
     .card:active{transform:scale(0.985);}
   }
+
+  /* ---------- search: Apple-style glass ---------- */
+  .search-wrap{display:flex;align-items:center;gap:10px;}
+  .search-field{position:relative;flex:1;min-width:0;}
+  .search-field svg{left:15px;width:18px;height:18px;}
+  .search-input{height:44px;font-size:16px;padding:0 42px 0 44px;
+    background:color-mix(in srgb,var(--fg) 9%,transparent);
+    -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+    box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--fg) 14%,transparent),inset 0 1px 0 color-mix(in srgb,var(--fg) 8%,transparent);
+    transition:background .2s ease,box-shadow .2s ease;}
+  .search-input:focus{background:color-mix(in srgb,var(--fg) 12%,transparent);
+    box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--fg) 22%,transparent);}
+  .search-clear{position:absolute;right:11px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;
+    background:color-mix(in srgb,var(--fg) 38%,transparent);color:var(--canvas);display:none;align-items:center;justify-content:center;padding:0;cursor:pointer;}
+  .search-clear svg{position:static;transform:none;width:10px;height:10px;color:var(--canvas);stroke-width:3;}
+  .search-cancel{display:none;font:400 16px 'Inter',sans-serif;color:var(--fg);background:none;border:none;padding:0;white-space:nowrap;cursor:pointer;}
+  .search-wrap.has-text .search-clear{display:flex;}
+  .search-wrap.focused .search-cancel{display:block;}
 </style>
 
 <!-- icon library -->
@@ -606,8 +624,12 @@
     <!-- SECTIONS LIST -->
     <section class="view active" id="view-list">
       <div class="search-wrap">
-        <svg viewBox="0 0 24 24"><use href="#i-search"/></svg>
-        <input class="search-input" id="searchInput" placeholder="Поиск по материалам" autocomplete="off">
+        <div class="search-field">
+          <svg viewBox="0 0 24 24"><use href="#i-search"/></svg>
+          <input class="search-input" id="searchInput" placeholder="Поиск по материалам" autocomplete="off" enterkeyhint="search">
+          <button class="search-clear" id="searchClear" aria-label="Очистить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <button class="search-cancel" id="searchCancel">Отмена</button>
       </div>
       <div class="seg" id="chips"></div>
       <div class="card-list" id="cardList"></div>
@@ -669,7 +691,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 05.10 fill</div>
+        <div class="pf-build">сборка 05.10 search</div>
       </div>
     </section>
 
@@ -4520,10 +4542,18 @@
     }
   }
 
-  document.getElementById("searchInput").addEventListener("input", function(e){
-    state.query = e.target.value;
-    renderList();
-  });
+  (function(){
+    var inp=document.getElementById("searchInput"), wrap=inp.closest(".search-wrap");
+    function sync(){ wrap.classList.toggle("has-text", !!inp.value); }
+    function setQuery(v){ inp.value=v; state.query=v; sync(); renderList(); }
+    inp.addEventListener("input", function(e){ state.query=e.target.value; sync(); renderList(); });
+    inp.addEventListener("focus", function(){ wrap.classList.add("focused"); });
+    inp.addEventListener("blur", function(){ setTimeout(function(){ if(!inp.value) wrap.classList.remove("focused"); },120); });
+    inp.addEventListener("keydown", function(e){ if(e.key==="Enter") inp.blur(); });
+    document.getElementById("searchClear").addEventListener("mousedown", function(e){ e.preventDefault(); });
+    document.getElementById("searchClear").addEventListener("click", function(){ haptic("light"); setQuery(""); inp.focus(); });
+    document.getElementById("searchCancel").addEventListener("click", function(){ haptic("light"); setQuery(""); wrap.classList.remove("focused"); inp.blur(); });
+  })();
 
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(btn){
     btn.addEventListener("click", function(){
