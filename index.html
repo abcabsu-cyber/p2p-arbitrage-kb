@@ -548,6 +548,37 @@
   .empty-q{color:var(--fg);font-weight:600;word-break:break-word;}
   .tabbar{transition:transform .45s cubic-bezier(.22,1,.36,1),opacity .3s ease;}
   .app.kb .tabbar{transform:translate3d(0,150%,0);opacity:0;pointer-events:none;}
+  /* ---------- Обучение: segmented switch + products ---------- */
+  .pseg{position:relative;display:flex;padding:4px;margin-bottom:var(--sp-4);background:var(--elevated);border-radius:var(--radius-pill);box-shadow:var(--shadow-card);}
+  .pseg-ind{position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px)/2);border-radius:var(--radius-pill);background:var(--canvas);
+    box-shadow:inset 0 0 0 1px var(--separator),0 1px 4px rgba(0,0,0,.12);transition:transform .35s cubic-bezier(.3,1.25,.4,1);}
+  .pseg-btn{position:relative;flex:1;height:38px;background:none;border:none;cursor:pointer;font:500 14px 'Inter',sans-serif;color:var(--fg-secondary);transition:color .15s ease;}
+  .pseg-btn.active{color:var(--fg);}
+  .prod-list{display:flex;flex-direction:column;gap:var(--sp-4);}
+  .prod{background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--sp-4);cursor:pointer;transition:transform .12s ease;}
+  .prod:active{transform:scale(.985);}
+  .prod-cover{position:relative;border-radius:var(--radius-md);height:132px;padding:16px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;color:#1a1a1d;}
+  .prod-cover.g1{background:linear-gradient(135deg,#ffe8c9,#f6d4ea 55%,#d9dcff);}
+  .prod-cover.g2{background:linear-gradient(135deg,#d3f4e6,#cfe4ff 55%,#e8d8ff);}
+  .prod-cover.g3{background:linear-gradient(135deg,#fff1b8,#ffd9c7 55%,#f3cfe9);}
+  .prod-cover.g4{background:linear-gradient(135deg,#d6e0ff,#e6d4ff 55%,#ffd3e0);}
+  .prod-eyebrow{font:600 10.5px 'Inter',sans-serif;letter-spacing:.07em;text-transform:uppercase;opacity:.6;margin-bottom:4px;}
+  .prod-cover-title{display:none;}
+  .prod-eyebrow{font-size:12px!important;opacity:.7!important;margin:0!important;}
+  .prod-title{font:600 17px/1.3 'Inter',sans-serif;color:var(--fg);margin:14px 0 4px;}
+  .prod-sub{font:400 14px/1.4 'Inter',sans-serif;color:var(--fg-secondary);}
+  .prod-foot{display:flex;align-items:center;justify-content:space-between;margin-top:14px;}
+  .prod-price{font:700 17px 'Inter',sans-serif;color:var(--fg);}
+  .prod-price small{font:400 13px 'Inter',sans-serif;color:var(--fg-secondary);margin-left:2px;}
+  .prod-more{font:500 14px 'Inter',sans-serif;color:var(--fg);background:var(--fill);border:none;border-radius:var(--radius-pill);padding:8px 16px;}
+  .buy-btn{display:block;width:100%;height:50px;border:none;border-radius:var(--radius-pill);background:var(--accent);color:var(--on-accent);font:600 16px 'Inter',sans-serif;cursor:pointer;margin:var(--sp-4) 0 0;transition:transform .12s ease;}
+  .buy-btn:active{transform:scale(.97);}
+  .price-card{margin-top:var(--sp-4);padding:var(--sp-4);background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
+  .price-big{font:700 28px 'Inter',sans-serif;letter-spacing:-.02em;color:var(--fg);}
+  .price-big small{font:400 14px 'Inter',sans-serif;color:var(--fg-secondary);margin-left:4px;letter-spacing:0;}
+  .toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;
+    background:var(--fg);color:var(--canvas);font:500 14px 'Inter',sans-serif;padding:11px 18px;border-radius:var(--radius-pill);transition:opacity .25s ease,transform .35s cubic-bezier(.3,1.3,.4,1);z-index:50;white-space:nowrap;}
+  .toast.show{opacity:1;transform:translate(-50%,0);}
 </style>
 
 <!-- icon library -->
@@ -665,12 +696,13 @@
 
     <!-- LEARNING -->
     <section class="view" id="view-learning">
-      <div class="profile">
-        <div class="app-mark" style="margin:0 auto var(--sp-4);width:48px;height:48px;font-size:13px;border-radius:var(--radius-md);">P2P</div>
-        <h2>Обучение</h2>
-        <p class="empty" style="padding:0;">Здесь появятся короткие уроки и практические задания по каждому разделу базы знаний.</p>
+      <div class="pseg" id="learnSeg"><div class="pseg-ind"></div>
+        <button class="pseg-btn active" data-lt="community">Сообщество</button>
+        <button class="pseg-btn" data-lt="courses">Обучение</button>
       </div>
+      <div class="prod-list" id="prodList"></div>
     </section>
+    <div class="toast" id="toast"></div>
 
     <!-- FAVORITES -->
     <section class="view" id="view-favorites">
@@ -715,7 +747,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 05.10 search3</div>
+        <div class="pf-build">сборка 05.10 learn</div>
       </div>
     </section>
 
@@ -4256,6 +4288,7 @@
     category: "all",
     query: "",
     selectedId: null,
+    learnTab: "community",
     favorites: loadFavorites(),
     theme: loadTheme()
   };
@@ -4528,8 +4561,77 @@
     if(state.selectedId === null) return;
     haptic("impact-soft");
     state.selectedId = null;
-    showView(state.detailFrom === "favorites" ? "view-favorites" : "view-list");
+    showView({favorites:"view-favorites",learning:"view-learning"}[state.detailFrom] || "view-list");
   }
+
+
+  // ===== Обучение: products (PLACEHOLDER content — replace with real products) =====
+  var PRODUCTS = [
+    {id:"club", kind:"community", cover:"g4", eyebrow:"Приватное сообщество", title:"Арбитраж без воздуха: клуб",
+     sub:"Закрытый чат с разбором связок, поддержкой и ежедневной аналитикой рынка.",
+     price:"4 900 ₽", per:"/ месяц",
+     desc:"Закрытое сообщество практиков P2P арбитража. Здесь не теория, а живая работа: связки дня, разбор ошибок, ответы на вопросы.",
+     features:["Закрытый чат участников","Ежедневный разбор связок и спредов","Ответы на вопросы в течение дня","Еженедельные эфиры с разбором","Доступ ко всем материалам клуба"]},
+    {id:"start", kind:"course", cover:"g1", eyebrow:"Курс", title:"Старт в P2P: от нуля до первой связки",
+     sub:"Пошаговая программа для новичков: от регистрации до первой прибыльной сделки.",
+     price:"9 900 ₽", per:"",
+     desc:"Курс для тех, кто начинает с нуля. Проведём по всему пути: биржи, безопасность, первые сделки и работа с рисками.",
+     features:["12 видеоуроков с практикой","Чек-листы и шаблоны объявлений","Разбор типичных ошибок новичков","Поддержка куратора 30 дней"]},
+    {id:"pro", kind:"course", cover:"g2", eyebrow:"Курс", title:"Связки и спреды: продвинутый уровень",
+     sub:"Как находить рабочие связки, считать спред и масштабировать оборот.",
+     price:"19 900 ₽", per:"",
+     desc:"Для тех, кто уже совершал сделки и хочет выйти на стабильный доход: расчёт, автоматизация, масштабирование.",
+     features:["16 уроков и разборы кейсов","Таблицы расчёта спреда","Работа с несколькими биржами","Закрытый чат потока"]},
+    {id:"kit", kind:"course", cover:"g3", eyebrow:"Набор", title:"Набор шаблонов и чек-листов",
+     sub:"Готовые таблицы, скрипты общения с клиентами и чек-листы безопасности.",
+     price:"2 900 ₽", per:"",
+     desc:"Всё, что нужно для ежедневной работы, в одном наборе. Скачайте, подставьте свои данные и работайте.",
+     features:["Таблица учёта сделок","Шаблоны ответов клиентам","Чек-лист безопасности","Обновления набора"]}
+  ];
+  function toast(msg){
+    var t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+    clearTimeout(toast._t); toast._t=setTimeout(function(){ t.classList.remove("show"); },2200);
+  }
+  function renderLearning(){
+    var kind = state.learnTab==="courses" ? "course" : "community";
+    var seg=document.getElementById("learnSeg");
+    seg.querySelector(".pseg-ind").style.transform = "translateX("+(kind==="course"?100:0)+"%)";
+    Array.prototype.forEach.call(seg.querySelectorAll(".pseg-btn"), function(b){ b.classList.toggle("active", b.getAttribute("data-lt")===state.learnTab); });
+    var box=document.getElementById("prodList");
+    box.innerHTML = PRODUCTS.filter(function(p){ return p.kind===kind; }).map(function(p){
+      return '<article class="prod" data-pid="'+p.id+'">'+
+        '<div class="prod-cover '+p.cover+'"><div class="prod-eyebrow">'+p.eyebrow+'</div><div class="prod-cover-title">'+p.title+'</div></div>'+
+        '<div class="prod-title">'+p.title+'</div><div class="prod-sub">'+p.sub+'</div>'+
+        '<div class="prod-foot"><div class="prod-price">'+p.price+(p.per?'<small>'+p.per+'</small>':'')+'</div><button class="prod-more">'+(p.kind==="community"?"Подробнее":"Смотреть")+'</button></div>'+
+      '</article>';
+    }).join("");
+    Array.prototype.forEach.call(box.querySelectorAll(".prod"), function(el){
+      el.addEventListener("click", function(){ openProduct(el.getAttribute("data-pid")); });
+    });
+  }
+  function openProduct(id){
+    var p=PRODUCTS.find(function(x){ return x.id===id; }); if(!p) return;
+    haptic("impact-light");
+    state.detailFrom = state.tab;
+    state.selectedId = "p:"+id;
+    var view=document.getElementById("view-detail");
+    view.innerHTML =
+      '<div class="detail-head"><button class="btn-icon" id="backBtn"><svg viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg></button><div class="detail-title">'+p.title+'</div></div>'+
+      '<div class="prod-cover '+p.cover+'" style="margin-top:var(--sp-4);height:150px;"><div class="prod-eyebrow">'+p.eyebrow+'</div><div class="prod-cover-title">'+p.title+'</div></div>'+
+      '<div class="detail-desc">'+p.desc+'</div>'+
+      '<div class="outline-title">'+(p.kind==="community"?"Что вы получите":"Что входит")+'</div>'+
+      p.features.map(function(f,i){ return '<div class="outline-item"><span class="outline-num">'+(i+1)+'</span><div>'+f+'</div></div>'; }).join("")+
+      '<div class="price-card"><div class="price-big">'+p.price+(p.per?'<small>'+p.per+'</small>':'')+'</div>'+
+      '<button class="buy-btn" id="buyBtn">'+(p.kind==="community"?"Вступить":"Купить")+'</button></div>';
+    document.getElementById("backBtn").addEventListener("click", closeDetail);
+    document.getElementById("buyBtn").addEventListener("click", function(){ haptic("success"); toast("Оплата появится после запуска"); });
+    showView("view-detail");
+  }
+  document.getElementById("learnSeg").addEventListener("click", function(e){
+    var b=e.target.closest(".pseg-btn"); if(!b) return;
+    var t=b.getAttribute("data-lt"); if(t===state.learnTab) return;
+    haptic("selection"); state.learnTab=t; renderLearning();
+  });
 
   function toggleFavorite(id){
     haptic(state.favorites.has(id) ? "impact-soft" : "success");
@@ -4582,6 +4684,7 @@
       state.selectedId = null;
       showView("view-list");
     } else if(tab === "learning"){
+      renderLearning();
       showView("view-learning");
     } else if(tab === "favorites"){
       renderFavorites();
@@ -4660,5 +4763,6 @@
 
   applyTheme();
   renderProfile();
+  renderLearning();
 })();
 </script>
