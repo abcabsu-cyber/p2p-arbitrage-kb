@@ -663,6 +663,14 @@
   .chk-i.on .chk-box{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
   .chk-i.on span:last-child{color:var(--fg-secondary);}
   .chk-i:active .chk-box{transform:scale(.9);}
+  /* micro-effects: star burst, reading progress, confetti */
+  .star-btn{position:relative;}
+  .star-btn .spark{position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px;border-radius:50%;background:var(--spark,#A64748);pointer-events:none;opacity:0;}
+  .read-bar{position:fixed;left:0;right:0;top:0;height:3px;z-index:60;background:transparent;pointer-events:none;opacity:0;transition:opacity .2s ease;}
+  .read-bar.on{opacity:1;}
+  .read-bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:0 3px 3px 0;}
+  .blk.chk{position:relative;}
+  canvas.confetti{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;border-radius:var(--radius-lg);}
   .callout{display:flex;gap:12px;margin:0 0 16px;padding:14px 16px;border-radius:var(--radius-md);background:var(--fill);}
   .callout-ic{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:1px;}
   .callout-ic svg{width:15px;height:15px;}
@@ -900,7 +908,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 06.10 gate10</div>
+        <div class="pf-build" id="pfBuild">сборка 06.10 gate11</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4688,6 +4696,55 @@
   function openUrl(h){
     try{ if(/^https:\/\/t\.me\//.test(h) && tg.openTelegramLink) tg.openTelegramLink(h); else if(tg.openLink) tg.openLink(h); else window.open(h,"_blank"); }catch(x){ window.open(h,"_blank"); }
   }
+  var REDUCE_MOTION = false; try{ REDUCE_MOTION = matchMedia("(prefers-reduced-motion:reduce)").matches; }catch(e){}
+  function starFx(btn){
+    if(REDUCE_MOTION || !btn.animate) return;
+    try{
+      var svg=btn.querySelector("svg");
+      svg.animate([{transform:"scale(.7)"},{transform:"scale(1.25)"},{transform:"scale(1)"}],{duration:420,easing:"cubic-bezier(.2,.9,.3,1.4)"});
+      for(var i=0;i<6;i++){
+        var d=document.createElement("i"); d.className="spark"; btn.appendChild(d);
+        var a=i/6*Math.PI*2, r=24;
+        var an=d.animate([{transform:"translate(0,0) scale(1)",opacity:1},{transform:"translate("+Math.cos(a)*r+"px,"+Math.sin(a)*r+"px) scale(.2)",opacity:0}],{duration:520,easing:"cubic-bezier(.2,.8,.3,1)"});
+        an.onfinish=(function(el){ return function(){ el.remove(); }; })(d);
+      }
+    }catch(e){}
+  }
+  function confettiFx(box){
+    if(REDUCE_MOTION) return;
+    try{
+      var cv=document.createElement("canvas"); cv.className="confetti"; box.appendChild(cv);
+      var r=box.getBoundingClientRect(), dpr=window.devicePixelRatio||1; cv.width=r.width*dpr; cv.height=r.height*dpr;
+      var cx=cv.getContext("2d"); cx.setTransform(dpr,0,0,dpr,0,0);
+      var cols=["#1C1C1E","#9A9490","#C9C3BE","#A64748","#D9807F"], parts=[];
+      for(var i=0;i<46;i++){ var an=-Math.PI/2+(Math.random()-.5)*1.8, sp=5+Math.random()*7;
+        parts.push({x:r.width/2,y:r.height-30,vx:Math.cos(an)*sp,vy:Math.sin(an)*sp,w:5+Math.random()*5,h:3+Math.random()*4,rot:Math.random()*6,vr:(Math.random()-.5)*.4,c:cols[i%cols.length],life:1}); }
+      (function step(){
+        cx.clearRect(0,0,r.width,r.height); var alive=0;
+        parts.forEach(function(p){ p.vy+=.28; p.vx*=.99; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life-=.012;
+          if(p.life>0 && p.y<r.height+20){ alive++; cx.save(); cx.globalAlpha=Math.max(0,Math.min(1,p.life*1.6)); cx.translate(p.x,p.y); cx.rotate(p.rot); cx.fillStyle=p.c; cx.fillRect(-p.w/2,-p.h/2,p.w,p.h); cx.restore(); } });
+        if(alive) requestAnimationFrame(step); else cv.remove();
+      })();
+    }catch(e){}
+  }
+  // thin reading-progress line at the top of an article
+  var readBar=null, readDone=false;
+  function setupReadProgress(view){
+    var md=view.querySelector(".md"); if(!md) return;
+    if(!readBar){ readBar=document.createElement("div"); readBar.className="read-bar"; readBar.innerHTML="<i></i>"; document.body.appendChild(readBar);
+      var tick=function(){
+        if(!readBar.classList.contains("on")) return;
+        var cur=document.querySelector("#view-detail .md"); if(!cur) return;
+        var r=cur.getBoundingClientRect(), p=Math.max(0,Math.min(1,(window.innerHeight-90-r.top)/r.height));
+        readBar.firstChild.style.width=(p*100)+"%";
+        if(p>.985 && !readDone){ readDone=true; haptic("success"); }
+      };
+      document.addEventListener("scroll", tick, true);
+      window.addEventListener("resize", tick);
+    }
+    readDone=false; readBar.firstChild.style.width="0"; readBar.classList.add("on");
+  }
+  function hideReadProgress(){ if(readBar) readBar.classList.remove("on"); }
   function wireArticle(view){
     view.onclick = function(e){
       var t = e.target.closest("[data-toc],[data-url],[data-app],[data-share],[data-chk],[data-tab],[data-more]");
@@ -4707,7 +4764,7 @@
         var cb=t.closest(".chk"), tot=+cb.getAttribute("data-total"), dn=cb.querySelectorAll(".chk-i.on").length;
         cb.querySelector(".chk-n").textContent = dn+" из "+tot;
         cb.querySelector(".chk-bar i").style.width = Math.round(dn/tot*100)+"%";
-        if(dn===tot){ haptic("success"); toast("Все пункты проверены"); }
+        if(dn===tot){ haptic("success"); confettiFx(cb); }
       }
     };
   }
@@ -4776,6 +4833,7 @@
     state.selectedId = id;
     var isFav = state.favorites.has(id);
     var view = document.getElementById("view-detail");
+    hideReadProgress();
     if(s._md){
       view.innerHTML =
         '<div class="detail-head"><button class="btn-icon" id="backBtn"><svg viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg></button><div style="flex:1"></div>'+
@@ -4788,10 +4846,11 @@
         '<p class="art-lead">'+s.desc+'</p>'+
         '<div class="md">'+mdRender(s._md)+'</div>';
       wireArticle(view);
+      setupReadProgress(view);
       document.getElementById("backBtn").addEventListener("click", closeDetail);
       document.getElementById("shareBtn").addEventListener("click", function(){ shareSection(s); });
       var sb=document.getElementById("starBtn"); sb.classList.toggle("active", isFav);
-      sb.addEventListener("click", function(){ toggleFavorite(id); this.classList.toggle("active", state.favorites.has(id)); });
+      sb.addEventListener("click", function(){ toggleFavorite(id); var on=state.favorites.has(id); this.classList.toggle("active", on); if(on) starFx(this); });
       Array.prototype.forEach.call(view.querySelectorAll("a[data-ext]"), function(a){
         a.addEventListener("click", function(e){ e.preventDefault(); var h=a.getAttribute("href");
           try{ if(/^https:\/\/t\.me\//.test(h) && tg.openTelegramLink) tg.openTelegramLink(h); else if(tg.openLink) tg.openLink(h); else window.open(h,"_blank"); }catch(x){ window.open(h,"_blank"); } });
@@ -4821,6 +4880,7 @@
       toggleFavorite(id);
       var on = state.favorites.has(id);
       this.classList.toggle("active", on);
+      if(on) starFx(this);
       this.querySelector("svg").setAttribute("fill", on ? "currentColor" : "none");
     });
 
@@ -4831,6 +4891,7 @@
     if(state.selectedId === null) return;
     haptic("impact-soft");
     state.selectedId = null;
+    hideReadProgress();
     showView({favorites:"view-favorites",learning:"view-learning"}[state.detailFrom] || "view-list");
   }
 
@@ -4913,6 +4974,7 @@
     }catch(e){}
   }
   function showView(id){
+    if(id !== "view-detail") hideReadProgress();
     var cur = document.querySelector(".view.active");
     if(cur) scrollMem[cur.id] = getScroll();
     Array.prototype.forEach.call(document.querySelectorAll(".view"), function(v){
