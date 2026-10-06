@@ -674,6 +674,27 @@
   .read-bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:0 3px 3px 0;}
   .blk.chk{position:relative;}
   canvas.confetti{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;border-radius:var(--radius-lg);}
+  /* competitor check (verdict) */
+  .vd .vd-lead{font:400 14.5px/1.5 'Inter',sans-serif;color:var(--fg-secondary);margin:0 0 6px;}
+  .vd .chk-i.merchant{border-top:0;border-bottom:1px solid var(--separator);margin-bottom:2px;}
+  .vd .vd-go{margin-top:14px;}
+  .vd .chk-i.merchant + .chk-i{border-top:0;}
+  .vd-res{margin-top:14px;border-radius:var(--radius-md);padding:16px;animation:vdin .35s cubic-bezier(.2,.9,.3,1.1);}
+  @keyframes vdin{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+  .vd-res.ok{background:color-mix(in srgb,var(--success) 15%,var(--canvas));}
+  .vd-res.bad{background:var(--danger-soft);}
+  .vd-top{display:flex;gap:12px;align-items:center;margin-bottom:8px;}
+  .vd-flag{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;}
+  .vd-flag svg{width:22px;height:22px;}
+  .vd-res.ok .vd-flag{background:var(--success);}
+  .vd-res.bad .vd-flag{background:var(--danger);}
+  .vd-top b{display:block;font:700 18px/1.25 'Inter',sans-serif;}
+  .vd-top span{font:400 14px/1.4 'Inter',sans-serif;color:var(--fg-secondary);}
+  .vd-res ul{margin:8px 0 0;padding-left:20px;font:400 14.5px/1.5 'Inter',sans-serif;}
+  .vd-res li{margin:0 0 6px;}
+  .vd-res li small{display:block;color:var(--fg-secondary);font-size:13px;}
+  .vd-tip{margin:10px 0 0;font:500 14px/1.5 'Inter',sans-serif;}
+  .vd-again{margin-top:12px;border:0;background:var(--fill);color:var(--fg);border-radius:12px;padding:10px 14px;font:600 14px 'Inter',sans-serif;cursor:pointer;}
   .callout{display:flex;gap:12px;margin:0 0 16px;padding:14px 16px;border-radius:var(--radius-md);background:var(--fill);}
   .callout-ic{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:1px;}
   .callout-ic svg{width:15px;height:15px;}
@@ -916,7 +937,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 06.10 gate17</div>
+        <div class="pf-build" id="pfBuild">сборка 06.10 gate18</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4658,6 +4679,13 @@
     if(type==="checklist"){
       return '<div class="blk chk" data-total="'+items.length+'"><div class="chk-top"><b>'+mdInline(o.title||"Чек-лист")+'</b><span class="chk-n">0 из '+items.length+'</span></div><div class="chk-bar"><i></i></div>'+items.map(function(t){ return '<button class="chk-i" data-chk="1"><span class="chk-box">'+ICO.check+'</span><span>'+mdInline(t)+'</span></button>'; }).join("")+'</div>';
     }
+    if(type==="verdict"){
+      var rows=items.map(function(t){ var a=t.split(" | "); return {kind:a[0],text:a[1]||"",why:a[2]||""}; });
+      var rowHtml=function(r){ return '<button class="chk-i'+(r.kind==="merchant"?' merchant':'')+'" data-vrow="1" data-kind="'+esc(r.kind)+'" data-why="'+esc(r.why)+'"><span class="chk-box">'+ICO.check+'</span><span>'+mdInline(r.text)+'</span></button>'; };
+      var flag='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"/><path d="M6 5h11l-2 4 2 4H6" fill="currentColor"/></svg>';
+      return '<div class="blk vd"><div class="blk-title">'+mdInline(o.title||"Конкурент или нет?")+'</div>'+(o.lead?'<p class="vd-lead">'+mdInline(o.lead)+'</p>':'')+
+        rows.map(rowHtml).join("")+'<button class="buy-btn vd-go" data-vgo="1" style="margin-bottom:0">Определить</button><div class="vd-res" hidden></div></div>';
+    }
     if(type==="compare"){
       var tabs=[], cur=null;
       lines.forEach(function(x){ var m;
@@ -4757,7 +4785,7 @@
   function hideReadProgress(){ if(readBar) readBar.classList.remove("on"); }
   function wireArticle(view){
     view.onclick = function(e){
-      var t = e.target.closest("[data-toc],[data-url],[data-app],[data-share],[data-chk],[data-tab],[data-more]");
+      var t = e.target.closest("[data-toc],[data-url],[data-app],[data-share],[data-chk],[data-tab],[data-more],[data-vrow],[data-vgo],[data-vagain]");
       if(!t) return;
       if(t.hasAttribute("data-toc")){ haptic("impact-light"); var el=document.getElementById(t.getAttribute("data-toc")); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); }
       else if(t.hasAttribute("data-more")){ haptic("impact-light"); t.closest(".toc").classList.toggle("open"); var sp=t.querySelector("span"), op=t.closest(".toc").classList.contains("open"); if(op){ t.setAttribute("data-label", sp.textContent); sp.textContent="Свернуть"; } else sp.textContent=t.getAttribute("data-label")||sp.textContent; }
@@ -4769,6 +4797,32 @@
       }
       else if(t.hasAttribute("data-app")){ openDetail(t.getAttribute("data-app")); }
       else if(t.hasAttribute("data-share")){ var cs=SECTIONS.find(function(x){ return x.id===state.selectedId; }); if(cs) shareSection(cs); }
+      else if(t.hasAttribute("data-vrow")){ t.classList.toggle("on"); haptic("selection"); }
+      else if(t.hasAttribute("data-vgo")){
+        var vb=t.closest(".vd"), res=vb.querySelector(".vd-res"), sc=0, merchant=false, why=[], tip="";
+        Array.prototype.forEach.call(vb.querySelectorAll("[data-vrow].on"), function(r){
+          var k=r.getAttribute("data-kind"), tx=r.querySelector("span:last-child").textContent, w=r.getAttribute("data-why");
+          if(k==="merchant") merchant=true;
+          else if(k==="strong"){ sc+=2; why.push([tx,w]); }
+          else if(k==="mild"){ sc+=1; why.push([tx,w]); }
+          else if(k==="hint") tip=w;
+        });
+        var isOk = !merchant && sc>=2, flagSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"/><path d="M6 5h11l-2 4 2 4H6" fill="currentColor"/></svg>';
+        var title, sub, list="";
+        if(merchant){ title="Конкурент: мерчант"; sub="С мерчантом бодаться бессмысленно: выставьте своё объявление выгоднее, чем у него."; }
+        else if(isOk){ title="Не конкурент"; sub="Его можно не считать при выборе курса. Причины:"; }
+        else { title="Конкурент"; sub = sc===0 ? "Слабых мест не отмечено. Ориентируйтесь на его курс и вставайте выгоднее." : "Одного слабого места мало, считайте его конкурентом."; }
+        if(!merchant && why.length) list='<ul>'+why.map(function(x){ return '<li>'+esc(x[0])+(x[1]?'<small>'+esc(x[1])+'</small>':'')+'</li>'; }).join("")+'</ul>';
+        res.className="vd-res "+(isOk?"ok":"bad");
+        res.innerHTML='<div class="vd-top"><span class="vd-flag">'+flagSvg+'</span><div><b>'+title+'</b></div></div><div style="font:400 14.5px/1.5 Inter,sans-serif">'+esc(sub)+'</div>'+list+(tip?'<p class="vd-tip">'+esc(tip)+'</p>':'')+'<button class="vd-again" data-vagain="1">Проверить другого</button>';
+        res.hidden=false; haptic(isOk?"success":"impact-medium");
+        try{ res.scrollIntoView({behavior:"smooth",block:"nearest"}); }catch(x){}
+      }
+      else if(t.hasAttribute("data-vagain")){
+        var vb2=t.closest(".vd"); haptic("impact-light");
+        Array.prototype.forEach.call(vb2.querySelectorAll("[data-vrow].on"), function(r){ r.classList.remove("on"); });
+        vb2.querySelector(".vd-res").hidden=true;
+      }
       else if(t.hasAttribute("data-tab")){
         haptic("selection"); var box=t.closest(".cmp"), k=t.getAttribute("data-tab");
         Array.prototype.forEach.call(box.querySelectorAll(".cmp-tab"), function(b){ b.classList.toggle("on", b.getAttribute("data-tab")===k); });
