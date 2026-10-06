@@ -100,6 +100,8 @@ async function handleUpdate(env, ctx, upd) {
   const text = m.text.trim();
   const isOwner = String(m.from.id) === String(env.OWNER_ID);
 
+  if (m.chat.type === "private" && !/^\/start(\s|$)/.test(text)) await addSub(env, chatId);   // anyone who writes to the bot is a subscriber
+
   if (/^\/myid/.test(text)) {
     await tg(env, "sendMessage", { chat_id: chatId, text: `Ваш Telegram ID: ${m.from.id}` });
     return;
@@ -262,6 +264,7 @@ export default {
       const r = await tg(env, "getChatMember", { chat_id: CFG.CHANNEL, user_id: user.id });
       if (!r.ok) return json({ ok: false, error: "channel check failed (is the bot an admin of the channel?)" }, 502, h);
       const subscribed = ["member", "administrator", "creator"].includes(r.result.status);
+      ctx.waitUntil(addSub(env, user.id).catch(() => {}));   // opening the app also registers the user (delivery only works once they have pressed Start; failures are cleaned up automatically)
       return json({ ok: true, subscribed }, 200, h);
     }
 
