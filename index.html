@@ -624,6 +624,7 @@
   .toc-more{display:flex;align-items:center;gap:6px;background:none;border:0;border-top:1px solid var(--separator);width:100%;padding:13px 0 2px;font:600 15px 'Inter',sans-serif;color:var(--fg);cursor:pointer;}
   .toc-more svg{width:16px;height:16px;transition:transform .25s ease;}
   .toc.open .toc-more svg{transform:rotate(180deg);}
+  .md a.lcard{text-decoration:none;color:var(--fg);}
   .lcard{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:0;margin:0 0 16px;padding:14px;border-radius:var(--radius-lg);background:var(--elevated);box-shadow:var(--shadow-card);cursor:pointer;transition:transform .15s ease;}
   .lcard:active{transform:scale(.98);}
   .lic{flex:none;width:52px;height:52px;border-radius:15px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--fg);}
@@ -908,7 +909,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 06.10 gate11</div>
+        <div class="pf-build" id="pfBuild">сборка 06.10 gate12</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4636,8 +4637,9 @@
       return '<div class="blk toc"><div class="toc-top">'+ICO.list+'<b>Содержание</b><span>'+n+' '+(n<5?'раздела':'разделов')+'</span></div>'+rows+more+'</div>';
     }
     if(type==="link"){
-      var u=o.url||"", at = /^app:/.test(u) ? ' data-app="'+esc(u.slice(4))+'"' : (u==="share" ? ' data-share="1"' : ' data-url="'+esc(u)+'"');
-      return '<button class="lcard"'+at+'><span class="lic">'+(ICO[o.icon]||ICO.link)+'</span><span class="ltx"><b>'+mdInline(o.title||"")+'</b><small>'+mdInline(o.desc||"")+'</small></span><span class="larr">'+ICO.arrow+'</span></button>';
+      var u=o.url||"", ext = /^https?:\/\//.test(u), tag = ext ? 'a' : 'button',
+          at = /^app:/.test(u) ? ' data-app="'+esc(u.slice(4))+'"' : (u==="share" ? ' data-share="1"' : ' data-url="'+esc(u)+'" href="'+esc(u)+'" target="_blank" rel="noopener"');
+      return '<'+tag+' class="lcard"'+at+'><span class="lic">'+(ICO[o.icon]||ICO.link)+'</span><span class="ltx"><b>'+mdInline(o.title||"")+'</b><small>'+mdInline(o.desc||"")+'</small></span><span class="larr">'+ICO.arrow+'</span></'+tag+'>';
     }
     if(type==="terms"){
       return '<div class="blk terms">'+items.map(function(t){ var k=t.indexOf(": "); return '<div class="term"><div><b>'+mdInline(k<0?t:t.slice(0,k))+'</b>'+(k<0?'':'<span>'+mdInline(t.slice(k+2))+'</span>')+'</div></div>'; }).join("")+'</div>';
@@ -4751,7 +4753,12 @@
       if(!t) return;
       if(t.hasAttribute("data-toc")){ haptic("impact-light"); var el=document.getElementById(t.getAttribute("data-toc")); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); }
       else if(t.hasAttribute("data-more")){ haptic("impact-light"); t.closest(".toc").classList.toggle("open"); var sp=t.querySelector("span"), op=t.closest(".toc").classList.contains("open"); if(op){ t.setAttribute("data-label", sp.textContent); sp.textContent="Свернуть"; } else sp.textContent=t.getAttribute("data-label")||sp.textContent; }
-      else if(t.hasAttribute("data-url")){ haptic("impact-light"); openUrl(t.getAttribute("data-url")); }
+      else if(t.hasAttribute("data-url")){
+        haptic("impact-light");
+        var hu=t.getAttribute("data-url"), okOpen=false;
+        try{ if(/^https:\/\/t\.me\//.test(hu) && tg && tg.openTelegramLink){ tg.openTelegramLink(hu); okOpen=true; } else if(tg && tg.openLink){ tg.openLink(hu); okOpen=true; } }catch(x){}
+        if(okOpen) e.preventDefault();   // otherwise the real link (target=_blank) still works
+      }
       else if(t.hasAttribute("data-app")){ openDetail(t.getAttribute("data-app")); }
       else if(t.hasAttribute("data-share")){ var cs=SECTIONS.find(function(x){ return x.id===state.selectedId; }); if(cs) shareSection(cs); }
       else if(t.hasAttribute("data-tab")){
