@@ -129,31 +129,57 @@ async function handleUpdate(env, ctx, upd) {
     return;
   }
 
-  const post = text.match(/^\/post\s+(\S+)/);
+  if (/^\/test\s+/.test(text)) {
+    const body = text.replace(/^\/test\s+/, "");
+    await tg(env, "sendMessage", { chat_id: chatId, text: esc(body), parse_mode: "HTML", disable_web_page_preview: true });
+    return;
+  }
+
+  if (/^\/undo/.test(text)) {
+    const raw = await env.SUBS.get("last");
+    if (!raw) { await tg(env, "sendMessage", { chat_id: chatId, text: "Нечего отзывать: последней рассылки нет." }); return; }
+    const last = JSON.parse(raw);
+    if (Date.now() - last.ts > 47 * 3600 * 1000) {
+      await env.SUBS.delete("last");
+      await tg(env, "sendMessage", { chat_id: chatId, text: "С момента рассылки прошло больше 48 часов, Telegram не позволяет удалить такие сообщения." });
+      return;
+    }
+    await env.SUBS.put("job", JSON.stringify({ mode: "undo", msgs: last.msgs, idx: 0, done: 0, failed: 0, ownerChat: chatId }));
+    await tg(env, "sendMessage", { chat_id: chatId, text: `Удаляю последнюю рассылку у ${last.msgs.length} получателей. Пришлю итог.` });
+    await continueJob(env, ctx);
+    return;
+  }
+
+  const post = text.match(/^\/(post|post_test)\s+(\S+)/);
   if (post) {
-    const id = post[1];
+    const id = post[2], testOnly = post[1] === "post_test";
     const list = await (await fetch(CFG.APP_URL + "content/materials.json", { cf: { cacheTtl: 0 } })).json();
     const s = (list.sections || []).find((x) => x.id === id);
     if (!s) {
       await tg(env, "sendMessage", { chat_id: chatId, text: `Материал «${id}» не найден.` });
       return;
     }
-    await startJob(env, ctx, {
+    const payload = {
       text: `🆕 <b>Новый материал</b>\n\n<b>${esc(s.title)}</b>\n${esc(s.desc)}`,
       button: { text: "Читать", url: `https://t.me/${CFG.BOT_USERNAME}?startapp=${id}` },
-    }, chatId);
+    };
+    if (testOnly) {
+      await tg(env, "sendMessage", { chat_id: chatId, text: payload.text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: [[payload.button]] } });
+      return;
+    }
+    await startJob(env, ctx, payload, chatId);
     return;
   }
 
   await tg(env, "sendMessage", {
     chat_id: chatId,
-    text: "Команды владельца:\n/post <id материала> — рассылка о новом материале\n/broadcast <текст> — произвольная рассылка\n/stats — число подписчиков",
+    text: "Команды владельца:\n/post <id> — рассылка о новом материале\n/broadcast <текст> — произвольная рассылка\n/test <текст> и /post_test <id> — то же, но только вам (проверка)\n/undo — удалить последнюю рассылку у всех (до 48 часов)\n/stats — число подписчиков",
   });
 }
 
 // ---------- broadcast (chunked so it works on the free plan) ----------
 async function startJob(env, ctx, job, ownerChat) {
-  await env.SUBS.put("job", JSON.stringify({ ...job, ownerChat, sent: 0, failed: 0, cursor: null }));
+  await env.SUBS.put("job", JSON.stringify({ ...job, ownerChat, sent: 0, failed: 0, cursor: null, msgs: [] }));
   await tg(env, "sendMessage", { chat_id: ownerChat, text: "Рассылка запущена. Пришлю итог, когда закончу." });
   await continueJob(env, ctx);
 }
@@ -162,13 +188,29 @@ async function continueJob(env, ctx) {
   const raw = await env.SUBS.get("job");
   if (!raw) return;
   const job = JSON.parse(raw);
+  if (job.mode === "undo") {
+    const part = job.msgs.slice(job.idx, job.idx + CHUNK);
+    for (const [chat, mid] of part) {
+      const r = await tg(env, "deleteMessage", { chat_id: chat, message_id: mid });
+      if (r.ok) job.done++; else job.failed++;
+    }
+    job.idx += part.length;
+    if (job.idx >= job.msgs.length) {
+      await env.SUBS.delete("job"); await env.SUBS.delete("last");
+      await tg(env, "sendMessage", { chat_id: job.ownerChat, text: `Рассылка удалена. Удалено: ${job.done}, не удалось: ${job.failed}.` });
+      return;
+    }
+    await env.SUBS.put("job", JSON.stringify(job));
+    ctx.waitUntil(fetch(new URL("/continue", CFG.SELF).toString(), { method: "POST", headers: { "x-secret": env.WEBHOOK_SECRET } }).catch(() => {}));
+    return;
+  }
   const l = await env.SUBS.list({ prefix: "u:", limit: CHUNK, cursor: job.cursor || undefined });
   for (const k of l.keys) {
     const id = k.name.slice(2);
     const msg = { chat_id: id, text: job.text, parse_mode: "HTML", disable_web_page_preview: true };
     if (job.button) msg.reply_markup = { inline_keyboard: [[job.button]] };
     const r = await tg(env, "sendMessage", msg);
-    if (r.ok) job.sent++;
+    if (r.ok) { job.sent++; job.msgs.push([id, r.result.message_id]); }
     else {
       job.failed++;
       if (r.error_code === 403) await delSub(env, id);
@@ -176,6 +218,7 @@ async function continueJob(env, ctx) {
   }
   if (l.list_complete || l.keys.length === 0) {
     await env.SUBS.delete("job");
+    await env.SUBS.put("last", JSON.stringify({ ts: Date.now(), msgs: job.msgs }));
     await tg(env, "sendMessage", { chat_id: job.ownerChat, text: `Рассылка завершена. Доставлено: ${job.sent}, не доставлено: ${job.failed}.` });
     return;
   }
