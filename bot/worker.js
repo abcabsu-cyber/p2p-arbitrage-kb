@@ -150,10 +150,11 @@ async function handleUpdate(env, ctx, upd) {
     return;
   }
 
-  const post = text.match(/^\/(post|post_test)\s+(\S+)/);
+  const post = text.match(/^\/(post_test|post)(?:\s+(\S+))?\s*$/);
   if (post) {
-    const id = post[2], testOnly = post[1] === "post_test";
+    const testOnly = post[1] === "post_test";
     const list = await (await fetch(CFG.APP_URL + "content/materials.json", { cf: { cacheTtl: 0 } })).json();
+    const id = post[2] || (list.sections && list.sections[0] && list.sections[0].id);   // no id = the newest material (first in the list)
     const s = (list.sections || []).find((x) => x.id === id);
     if (!s) {
       await tg(env, "sendMessage", { chat_id: chatId, text: `Материал «${id}» не найден.` });
@@ -173,7 +174,7 @@ async function handleUpdate(env, ctx, upd) {
 
   await tg(env, "sendMessage", {
     chat_id: chatId,
-    text: "Команды владельца:\n/post <id> — рассылка о новом материале\n/broadcast <текст> — произвольная рассылка\n/test <текст> и /post_test <id> — то же, но только вам (проверка)\n/undo — удалить последнюю рассылку у всех (до 48 часов)\n/stats — число подписчиков",
+    text: "Команды владельца:\n/post — рассылка о самом новом материале (или /post <id> о конкретном)\n/broadcast <текст> — произвольная рассылка\n/test <текст> и /post_test — то же, но только вам (проверка)\n/undo — удалить последнюю рассылку у всех (до 48 часов)\n/stats — число подписчиков",
   });
 }
 
