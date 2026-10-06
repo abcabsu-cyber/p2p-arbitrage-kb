@@ -23,6 +23,15 @@
   ],
   "sections": [
     {
+      "id": "examples",
+      "title": "Рабочие примеры анализа стакана",
+      "category": "orderbook",
+      "icon": "i-swap",
+      "desc": "Практика к теории: разбираем реальные стаканы ByBit для обычного пользователя и мерчанта и решаем, где вставать.",
+      "body": "content/articles/examples.md",
+      "cover": "content/images/examples-cover.jpg"
+    },
+    {
       "id": "orderbook",
       "title": "Работа с P2P-стаканом",
       "category": "orderbook",
