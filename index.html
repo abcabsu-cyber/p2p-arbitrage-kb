@@ -821,7 +821,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 06.10 gate4</div>
+        <div class="pf-build" id="pfBuild">сборка 06.10 gate5</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4550,6 +4550,7 @@
   function openFromStartParam(){
     try{
       var sp = tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param;
+      if(!sp){ try{ sp = new URLSearchParams(location.search).get("sec"); }catch(e){} }   // buttons inside the bot chat pass ?sec=<id>
       if(!sp) return;
       if(SECTIONS.some(function(x){ return x.id===sp; })){ state.tab="list"; openDetail(sp); }
       else if(PRODUCTS.some(function(x){ return x.id===sp; })){ switchTab("learning"); openProduct(sp); }

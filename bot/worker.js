@@ -161,7 +161,7 @@ async function handleUpdate(env, ctx, upd) {
     }
     const payload = {
       text: `🆕 <b>Новый материал</b>\n\n<b>${esc(s.title)}</b>\n${esc(s.desc)}`,
-      button: { text: "Читать", url: `https://t.me/${CFG.BOT_USERNAME}?startapp=${id}` },
+      button: { text: "Читать", web_app: { url: `${CFG.APP_URL}?sec=${encodeURIComponent(id)}` } },
     };
     if (testOnly) {
       await tg(env, "sendMessage", { chat_id: chatId, text: payload.text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: [[payload.button]] } });
