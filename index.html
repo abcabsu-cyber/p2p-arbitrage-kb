@@ -821,7 +821,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 06.10 gate3</div>
+        <div class="pf-build" id="pfBuild">сборка 06.10 gate4</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4873,9 +4873,13 @@
       haptic("impact-medium");
       prefs.onboarded = true; prefs.news = true; savePrefs(); syncNotifyRow();
       if(on.channel && CHANNEL_URL) setTimeout(openChannel, 500);
-      splashState.shown = true; box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450);
-      setTimeout(function(){ haptic("success"); }, 260);
-      setTimeout(function(){ checkSub().then(function(r){ if(r === "no") showGate(); }); }, 1500);   // one-time confirmation as the app opens
+      splashState.shown = true; go.disabled = true;
+      // keep the welcome screen up until we know whether the gate is needed, so the app never flashes in between
+      checkSub().then(function(r){
+        if(r === "no"){ showGate(); setTimeout(function(){ box.hidden = true; }, 60); }
+        else { box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450); }
+        setTimeout(function(){ haptic("success"); }, 200);
+      });
     };
     draw(); box.hidden = false; box.classList.remove("pending");
   }
@@ -4889,7 +4893,8 @@
     var box=document.getElementById("onb");
     box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450);
   }
-  setTimeout(function(){ splashState.content = true; splashState.sub = true; revealApp(); }, 1500);   // safety net
+  setTimeout(function(){ splashState.content = true; revealApp(); }, 1500);   // safety net
+  setTimeout(function(){ splashState.sub = true; revealApp(); }, 4500);   // safety net (subscription check has its own 4s timeout)
   // Launch haptics: a short rising rumble while the app starts (soft -> heavy), like a
   // loading "spin-up". Stops as soon as the app is revealed.
   var rampTimer = null;
