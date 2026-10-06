@@ -625,6 +625,7 @@
   .consent-dot svg{width:15px;height:15px;color:var(--canvas);stroke-width:3;opacity:0;transform:scale(.4);transition:opacity .15s ease,transform .3s cubic-bezier(.3,1.6,.4,1);}
   .consent.on .consent-dot{background:var(--fg);}
   .consent.on .consent-dot svg{opacity:1;transform:none;}
+  .consent.locked{cursor:default;}
   .onb-spacer{flex:1;min-height:24px;}
   .onb-hint{font:400 13px 'Inter',sans-serif;text-align:center;color:var(--fg-tertiary);margin-top:12px;}
   .onb .buy-btn:disabled{opacity:.4;cursor:default;}
@@ -810,7 +811,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 06.10 channel</div>
+        <div class="pf-build">сборка 06.10 locked</div>
       </div>
     </section>
 
@@ -4823,10 +4824,10 @@
 
   // ===== first run: consents + preferences (kept in localStorage and Telegram CloudStorage) =====
   // To bring back a legal checkbox (оферта, персональные данные) add an item with required:true.
-  var CHANNEL_URL = "https://t.me/test";   // e.g. "https://t.me/yourchannel" — when set, the welcome screen offers to subscribe
+  var CHANNEL_URL = "https://t.me/hanballit_arbitrage";   // e.g. "https://t.me/yourchannel" — when set, the welcome screen offers to subscribe
   var CONSENTS = [
     {id:"channel", label:"Подписаться на наш канал", required:false, def:true, show:function(){ return !!CHANNEL_URL; }},
-    {id:"news", label:"Сообщения о новых материалах", required:false, def:true}
+    {id:"news", label:"Сообщения о новых материалах", required:false, def:true, locked:true}
   ];
   function openChannel(){
     try{ if(tg && tg.openTelegramLink && inTelegram()) { tg.openTelegramLink(CHANNEL_URL); return; } }catch(e){}
@@ -4849,16 +4850,16 @@
     var on={}; items.forEach(function(c){ on[c.id]=!!c.def; });
     function draw(){
       list.innerHTML = items.map(function(c){
-        return '<button class="consent'+(on[c.id]?' on':'')+'" data-c="'+c.id+'"><span class="consent-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>'+c.label+'</span></button>';
+        return '<button class="consent'+(on[c.id]?' on':'')+(c.locked?' locked':'')+'" data-c="'+c.id+'"><span class="consent-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>'+c.label+'</span></button>';
       }).join("");
       var ok = items.every(function(c){ return !c.required || on[c.id]; });
       go.disabled = !ok;
       document.getElementById("onbHint").textContent = ok ? "" : "Отметьте обязательные пункты выше";
     }
-    list.onclick = function(e){ var b=e.target.closest(".consent"); if(!b) return; haptic("impact-light"); var id=b.getAttribute("data-c"); on[id]=!on[id]; draw(); };
+    list.onclick = function(e){ var b=e.target.closest(".consent"); if(!b || b.classList.contains("locked")) return; haptic("impact-light"); var id=b.getAttribute("data-c"); on[id]=!on[id]; draw(); };
     go.onclick = function(){
       haptic("impact-medium");
-      prefs.onboarded = true; prefs.news = !!on.news; savePrefs(); syncNotifyRow();
+      prefs.onboarded = true; prefs.news = true; savePrefs(); syncNotifyRow();
       if(on.channel && CHANNEL_URL) setTimeout(openChannel, 500);
       splashState.shown = true; box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450);
       setTimeout(function(){ haptic("success"); }, 260);   // one-time confirmation as the app opens
