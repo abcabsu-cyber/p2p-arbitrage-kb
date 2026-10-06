@@ -617,11 +617,7 @@
   .onb-cover{border-radius:var(--radius-lg);aspect-ratio:2.2/1;margin-top:var(--sp-3);display:flex;align-items:center;justify-content:center;
     background:linear-gradient(120deg,#ffe9d6 0%,#f4dcf3 38%,#dde3fb 68%,#d8f3ea 100%);}
   .onb-cover .app-mark{margin:0;width:64px;height:64px;font-size:17px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.18);}
-  .onb-cover.ava{position:relative;overflow:hidden;}
-  .onb-cover.ava::before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;background:url(content/images/channel.png) center/cover;filter:blur(34px) saturate(1.5);opacity:.55;}
-  .onb-cover.ava::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 55%);}
-  .onb-cover.ava img{position:relative;z-index:1;width:92px;height:92px;border-radius:50%;display:block;
-    box-shadow:0 0 0 4px rgba(255,255,255,.55),0 0 0 5px rgba(255,255,255,.35),0 12px 32px rgba(0,0,0,.22);}
+  .onb-cover.ban{aspect-ratio:2/1;background:#050507 url(content/images/gate-banner.jpg) center/cover no-repeat;}
   .onb h1{font:700 30px/1.15 'Inter',sans-serif;letter-spacing:-.02em;text-align:center;color:var(--fg);margin:var(--sp-6,28px) 0 var(--sp-2);}
   .onb-sub{font:400 16px/1.5 'Inter',sans-serif;text-align:center;color:var(--fg-secondary);margin:0 var(--sp-3) var(--sp-5);}
   .consent{display:flex;align-items:center;gap:14px;width:100%;padding:16px;margin-bottom:10px;background:var(--elevated);border:none;border-radius:var(--radius-md);
@@ -772,7 +768,7 @@
       <div class="onb-hint" id="onbHint"></div>
     </div>
     <div class="onb gate" id="gate" hidden style="z-index:102">
-      <div class="onb-cover ava"><img src="content/images/channel.png" alt=""></div>
+      <div class="onb-cover ban"></div>
       <h1>Подпишитесь на канал</h1>
       <p class="onb-sub">Чтобы открыть базу знаний, подпишитесь на наш канал: там новости, разборы и анонсы материалов.</p>
       <div class="onb-spacer"></div>
@@ -825,7 +821,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 06.10 gate2</div>
+        <div class="pf-build" id="pfBuild">сборка 06.10 gate3</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
