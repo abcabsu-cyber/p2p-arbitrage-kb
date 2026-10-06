@@ -763,7 +763,7 @@
       <div id="consents"></div>
       <div class="onb-spacer"></div>
       <button class="buy-btn" id="onbGo" style="margin:0">Продолжить</button>
-      <div class="onb-hint" id="onbHint">Изменить можно в профиле</div>
+      <div class="onb-hint" id="onbHint"></div>
     </div>
     <div class="boot-mark"><div class="app-mark">P2P</div></div>
 
@@ -803,17 +803,6 @@
           </button>
         </div>
 
-        <div class="pf-group" style="margin-top:var(--sp-4)">
-          <button class="pf-row" id="notifyRow">
-            <span class="pf-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span>
-            <span class="pf-txt">
-              <div class="pf-title">Новые материалы</div>
-              <div class="pf-desc">сообщения от бота о публикациях</div>
-            </span>
-            <span class="sw"></span>
-          </button>
-        </div>
-
         <div class="pf-label">Оформление</div>
         <div class="theme-seg" id="themeSeg">
           <span class="theme-ind"></span>
@@ -821,7 +810,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 05.10 launch</div>
+        <div class="pf-build">сборка 06.10 channel</div>
       </div>
     </section>
 
@@ -4834,9 +4823,15 @@
 
   // ===== first run: consents + preferences (kept in localStorage and Telegram CloudStorage) =====
   // To bring back a legal checkbox (оферта, персональные данные) add an item with required:true.
+  var CHANNEL_URL = "https://t.me/test";   // e.g. "https://t.me/yourchannel" — when set, the welcome screen offers to subscribe
   var CONSENTS = [
+    {id:"channel", label:"Подписаться на наш канал", required:false, def:true, show:function(){ return !!CHANNEL_URL; }},
     {id:"news", label:"Сообщения о новых материалах", required:false, def:true}
   ];
+  function openChannel(){
+    try{ if(tg && tg.openTelegramLink && inTelegram()) { tg.openTelegramLink(CHANNEL_URL); return; } }catch(e){}
+    window.open(CHANNEL_URL, "_blank");
+  }
   var PREF_KEY = "p2pkb_prefs_v1";
   var prefs = {onboarded:false, news:true};
   function savePrefs(){
@@ -4850,19 +4845,21 @@
   function syncNotifyRow(){ var r=document.getElementById("notifyRow"); if(r) r.classList.toggle("on", !!prefs.news); }
   function startOnboarding(){
     var box=document.getElementById("onb"), list=document.getElementById("consents"), go=document.getElementById("onbGo");
-    var on={}; CONSENTS.forEach(function(c){ on[c.id]=!!c.def; });
+    var items = CONSENTS.filter(function(c){ return !c.show || c.show(); });
+    var on={}; items.forEach(function(c){ on[c.id]=!!c.def; });
     function draw(){
-      list.innerHTML = CONSENTS.map(function(c){
+      list.innerHTML = items.map(function(c){
         return '<button class="consent'+(on[c.id]?' on':'')+'" data-c="'+c.id+'"><span class="consent-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>'+c.label+'</span></button>';
       }).join("");
-      var ok = CONSENTS.every(function(c){ return !c.required || on[c.id]; });
+      var ok = items.every(function(c){ return !c.required || on[c.id]; });
       go.disabled = !ok;
-      document.getElementById("onbHint").textContent = ok ? "Изменить можно в профиле" : "Отметьте обязательные пункты выше";
+      document.getElementById("onbHint").textContent = ok ? "" : "Отметьте обязательные пункты выше";
     }
     list.onclick = function(e){ var b=e.target.closest(".consent"); if(!b) return; haptic("impact-light"); var id=b.getAttribute("data-c"); on[id]=!on[id]; draw(); };
     go.onclick = function(){
       haptic("impact-medium");
       prefs.onboarded = true; prefs.news = !!on.news; savePrefs(); syncNotifyRow();
+      if(on.channel && CHANNEL_URL) setTimeout(openChannel, 500);
       splashState.shown = true; box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450);
       setTimeout(function(){ haptic("success"); }, 260);   // one-time confirmation as the app opens
     };
@@ -4907,10 +4904,6 @@
       if(prefs.onboarded){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }catch(e){} splashState.prefs = true; revealApp(); } else startOnboarding();
     });
   }
-  document.getElementById("notifyRow").addEventListener("click", function(){
-    haptic("selection"); prefs.news = !prefs.news; savePrefs(); syncNotifyRow();
-    toast(prefs.news ? "Будем сообщать о новых материалах" : "Сообщения отключены");
-  });
 
   startLaunchRamp();
   bootPrefs();
