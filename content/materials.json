@@ -24,7 +24,8 @@
    "category": "basics",
    "icon": "i-swap",
    "desc": "Как анализировать конкурентов в P2P-стакане: 14 критериев, по которым выбирать курс и место в объявлениях.",
-   "body": "content/articles/orderbook.md"
+   "body": "content/articles/orderbook.md",
+   "cover": "content/images/orderbook-cover.jpg"
   },
   {
    "id": "base",
