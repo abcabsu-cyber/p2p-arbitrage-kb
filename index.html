@@ -725,7 +725,13 @@
   .callout.c-note .callout-ic{background:color-mix(in srgb,var(--fg) 14%,transparent);color:var(--fg-secondary);}
   .callout.c-note .callout-title,.callout.c-note p{color:var(--fg-secondary);}
   .md hr{border:none;height:1px;background:var(--separator);margin:24px 0;}
-  .md img{display:block;width:100%;border-radius:var(--radius-md);margin:0 0 16px;}
+  .md img{display:block;width:100%;border-radius:var(--radius-md);margin:0 0 16px;cursor:zoom-in;box-shadow:0 0 0 1px var(--separator);}
+  .lightbox{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.88);opacity:0;transition:opacity .2s;display:flex;}
+  .lightbox.in{opacity:1;}
+  .lb-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:center;touch-action:pan-x pan-y pinch-zoom;padding:60px 0;}
+  .lb-scroll img{flex:none;margin:0 auto;width:auto;height:auto;max-width:none;min-width:100%;max-height:none;border-radius:6px;background:#fff;}
+  .lb-close{position:absolute;top:calc(env(safe-area-inset-top,0px) + 56px);right:14px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;}
+  .lb-close svg{width:20px;height:20px;}
   .md code{font:500 14px ui-monospace,Menlo,monospace;background:var(--fill);padding:2px 6px;border-radius:5px;}
   /* ---------- first-run screen ---------- */
   .onb{position:absolute;inset:0;z-index:100;background:var(--canvas);display:flex;flex-direction:column;
@@ -946,7 +952,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 07.10 gate22</div>
+        <div class="pf-build" id="pfBuild">сборка 07.10 gate23</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4798,8 +4804,19 @@
     readDone=false; readBar.firstChild.style.width="0"; readBar.classList.add("on");
   }
   function hideReadProgress(){ if(readBar) readBar.classList.remove("on"); }
+  function openLightbox(src){
+    var box = document.createElement("div");
+    box.className = "lightbox";
+    box.innerHTML = '<div class="lb-scroll"><img alt="" src="'+src+'"></div><button class="lb-close" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+    document.body.appendChild(box);
+    requestAnimationFrame(function(){ box.classList.add("in"); });
+    function close(){ box.classList.remove("in"); setTimeout(function(){ box.remove(); }, 200); }
+    box.onclick = function(e){ if(e.target.tagName !== "IMG") close(); };
+    haptic("impact-light");
+  }
   function wireArticle(view){
     view.onclick = function(e){
+      if(e.target.tagName === "IMG" && e.target.closest(".md")){ openLightbox(e.target.getAttribute("src")); return; }
       var t = e.target.closest("[data-toc],[data-url],[data-app],[data-share],[data-chk],[data-tab],[data-more],[data-vrow],[data-vgo],[data-vagain]");
       if(!t) return;
       if(t.hasAttribute("data-toc")){ haptic("impact-light"); var el=document.getElementById(t.getAttribute("data-toc")); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); }
