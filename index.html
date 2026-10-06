@@ -713,11 +713,14 @@
   .callout.c-old .callout-ic svg{width:13px;height:13px;}
   .callout.c-old .callout-title{color:var(--danger);font-size:12px;margin:2px 0 3px;}
   .callout.c-old .callout-body p{font-size:14px;line-height:1.5;color:var(--fg-secondary);}
-  .callout.c-bonus{padding:10px 13px;gap:10px;background:color-mix(in srgb,var(--accent) 9%,var(--canvas));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 22%,transparent);}
-  .callout.c-bonus .callout-ic{width:22px;height:22px;margin-top:0;background:var(--accent);color:var(--on-accent);}
+  .callout.c-bonus{position:relative;overflow:hidden;padding:11px 14px;gap:10px;background:linear-gradient(135deg,#fff3c4 0%,#ffe08a 48%,#f6c445 100%);box-shadow:inset 0 0 0 1px rgba(184,134,11,.45),0 4px 14px rgba(212,160,23,.28);}
+  .callout.c-bonus::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent);transform:skewX(-18deg);animation:goldShine 4.5s ease-in-out 1s infinite;pointer-events:none;}
+  @keyframes goldShine{0%,60%{left:-60%}100%{left:130%}}
+  @media (prefers-reduced-motion:reduce){.callout.c-bonus::after{animation:none;display:none;}}
+  .callout.c-bonus .callout-ic{width:22px;height:22px;margin-top:0;background:linear-gradient(145deg,#d9a21b,#a8730a);color:#fff;}
   .callout.c-bonus .callout-ic svg{width:12px;height:12px;}
-  .callout.c-bonus .callout-title{font-size:11px;margin:2px 0 2px;color:var(--fg);}
-  .callout.c-bonus .callout-body p{font-size:13px;line-height:1.45;color:var(--fg-secondary);}
+  .callout.c-bonus .callout-title{font-size:11px;margin:2px 0 2px;color:#7a5200;}
+  .callout.c-bonus .callout-body p{font-size:13px;line-height:1.45;color:#5c4308;}
   .callout.c-note .callout-ic{background:color-mix(in srgb,var(--fg) 14%,transparent);color:var(--fg-secondary);}
   .callout.c-note .callout-title,.callout.c-note p{color:var(--fg-secondary);}
   .md hr{border:none;height:1px;background:var(--separator);margin:24px 0;}
@@ -942,7 +945,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 07.10 gate20</div>
+        <div class="pf-build" id="pfBuild">сборка 07.10 gate21</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
