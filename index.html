@@ -695,6 +695,7 @@
   .vd-res li small{display:block;color:var(--fg-secondary);font-size:13px;}
   .vd-tip{margin:10px 0 0;font:500 14px/1.5 'Inter',sans-serif;}
   .vd-again{margin-top:12px;border:0;background:var(--fill);color:var(--fg);border-radius:12px;padding:10px 14px;font:600 14px 'Inter',sans-serif;cursor:pointer;}
+  .seg[hidden]{display:none !important;}
   .callout{display:flex;gap:12px;margin:0 0 16px;padding:14px 16px;border-radius:var(--radius-md);background:var(--fill);}
   .callout-ic{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:1px;}
   .callout-ic svg{width:15px;height:15px;}
@@ -945,7 +946,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 07.10 gate21</div>
+        <div class="pf-build" id="pfBuild">сборка 07.10 gate22</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4590,7 +4591,12 @@
   function renderChips(){
     var box = document.getElementById("chips");
     box.innerHTML = "";
-    CATEGORIES.forEach(function(c){
+    var used = {};
+    SECTIONS.forEach(function(x){ used[x.category] = 1; });
+    var shown = CATEGORIES.filter(function(c){ return c.id === "all" || used[c.id]; });
+    box.hidden = shown.length < 3;
+    if(state.category !== "all" && !used[state.category]) state.category = "all";
+    shown.forEach(function(c){
       var chip = el('<button class="seg-btn'+(state.category===c.id?' active':'')+'" data-cat="'+c.id+'">'+c.label+'</button>');
       chip.addEventListener("click", function(){
         if(state.category === c.id) return;
