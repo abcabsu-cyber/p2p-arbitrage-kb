@@ -766,6 +766,15 @@
       <button class="buy-btn" id="onbGo" style="margin:0">Продолжить</button>
       <div class="onb-hint" id="onbHint"></div>
     </div>
+    <div class="onb gate" id="gate" hidden style="z-index:102">
+      <div class="onb-cover"><div class="app-mark">P2P</div></div>
+      <h1>Подпишитесь на канал</h1>
+      <p class="onb-sub">Чтобы открыть базу знаний, подпишитесь на наш канал: там новости, разборы и анонсы материалов.</p>
+      <div class="onb-spacer"></div>
+      <button class="buy-btn" id="gateOpen" style="margin:0">Открыть канал</button>
+      <button class="buy-btn" id="gateCheck" style="margin:10px 0 0;background:var(--fill);color:var(--fg)">Я подписался</button>
+      <div class="onb-hint" id="gateHint"></div>
+    </div>
     <div class="boot-mark"><div class="app-mark">P2P</div></div>
 
     <!-- FAVORITES -->
@@ -811,7 +820,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 06.10 dev</div>
+        <div class="pf-build" id="pfBuild">сборка 06.10 gate</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4269,6 +4278,7 @@
         else if(kind === "impact-soft") hf.impactOccurred("soft");
         else if(kind === "impact-medium") hf.impactOccurred("medium");
         else if(kind === "impact-heavy") hf.impactOccurred("heavy");
+        else if(kind === "error") hf.notificationOccurred("error");
         else hf.impactOccurred("light");
         return;
       }
@@ -4827,7 +4837,7 @@
   // To bring back a legal checkbox (оферта, персональные данные) add an item with required:true.
   var CHANNEL_URL = "https://t.me/hanballit_arbitrage";   // e.g. "https://t.me/yourchannel" — when set, the welcome screen offers to subscribe
   var CONSENTS = [
-    {id:"channel", label:"Подписаться на наш канал", required:false, def:true, show:function(){ return !!CHANNEL_URL; }},
+    {id:"channel", label:"Подписаться на наш канал", required:false, def:true, locked:true, show:function(){ return !!CHANNEL_URL; }},
     {id:"news", label:"Сообщения о новых материалах", required:false, def:true, locked:true}
   ];
   function openChannel(){
@@ -4863,25 +4873,66 @@
       prefs.onboarded = true; prefs.news = true; savePrefs(); syncNotifyRow();
       if(on.channel && CHANNEL_URL) setTimeout(openChannel, 500);
       splashState.shown = true; box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450);
-      setTimeout(function(){ haptic("success"); }, 260);   // one-time confirmation as the app opens
+      setTimeout(function(){ haptic("success"); }, 260);
+      setTimeout(function(){ checkSub().then(function(r){ if(r === "no") showGate(); }); }, 1500);   // one-time confirmation as the app opens
     };
     draw(); box.hidden = false; box.classList.remove("pending");
   }
   // The splash (#onb in its "pending" state) covers the app until we know what to show,
   // so the materials never flash before the welcome screen.
-  var splashState = {prefs:false, content:false, minDone:false, shown:false};
+  var splashState = {prefs:false, content:false, minDone:false, sub:false, shown:false};
   function revealApp(){
     if(splashState.shown) return;
-    if(!(splashState.prefs && splashState.content && splashState.minDone)) return;
+    if(!(splashState.prefs && splashState.content && splashState.minDone && splashState.sub)) return;
     splashState.shown = true;
     var box=document.getElementById("onb");
     box.classList.add("out"); setTimeout(function(){ box.hidden = true; }, 450);
   }
-  setTimeout(function(){ splashState.content = true; revealApp(); }, 1500);   // safety net
+  setTimeout(function(){ splashState.content = true; splashState.sub = true; revealApp(); }, 1500);   // safety net
   // Launch haptics: a short rising rumble while the app starts (soft -> heavy), like a
   // loading "spin-up". Stops as soon as the app is revealed.
   var rampTimer = null;
   setTimeout(function(){ splashState.minDone = true; revealApp(); }, 650);   // let the launch rumble play out
+
+  // ===== channel-subscription gate (checked by the bot server; the app never sees the bot token) =====
+  var SUB_API = "https://p2p-study-bot.abc-absu.workers.dev/api/check-sub";
+  function checkSub(){
+    return new Promise(function(resolve){
+      var d = null;
+      try{ d = tg && tg.initData; }catch(e){}
+      if(!d || !inTelegram() || !SUB_API){ resolve("skip"); return; }
+      var t = setTimeout(function(){ resolve("unknown"); }, 4000);
+      fetch(SUB_API, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({initData:d})})
+        .then(function(r){ return r.json(); })
+        .then(function(j){ clearTimeout(t); resolve(j && j.ok ? (j.subscribed ? "yes" : "no") : "unknown"); })
+        .catch(function(){ clearTimeout(t); resolve("unknown"); });
+    });
+  }
+  var gateEl = document.getElementById("gate");
+  function showGate(){ document.getElementById("gateHint").textContent = ""; gateEl.classList.remove("out"); gateEl.hidden = false; }
+  function hideGate(){ gateEl.classList.add("out"); setTimeout(function(){ gateEl.hidden = true; }, 450); }
+  document.getElementById("gateOpen").addEventListener("click", function(){ haptic("impact-light"); openChannel(); });
+  var gateBusy = false;
+  function recheckGate(manual){
+    if(gateBusy || gateEl.hidden) return;
+    gateBusy = true;
+    checkSub().then(function(r){
+      gateBusy = false;
+      if(r === "no"){ if(manual){ haptic("error"); document.getElementById("gateHint").textContent = "Подписка не найдена. Подпишитесь и нажмите ещё раз."; } }
+      else { haptic("success"); hideGate(); }   // subscribed (or the check is unavailable: do not lock people out)
+    });
+  }
+  document.getElementById("gateCheck").addEventListener("click", function(){ haptic("impact-light"); recheckGate(true); });
+  document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "visible") recheckGate(false); });
+  try{ if(tg && tg.onEvent) tg.onEvent("activated", function(){ recheckGate(false); }); }catch(e){}
+  function runLaunchCheck(){
+    checkSub().then(function(r){
+      splashState.sub = true;
+      if(r === "no") showGate();
+      revealApp();
+    });
+  }
+
   function startLaunchRamp(){
     var seq = ["impact-soft","impact-soft","impact-light","impact-light","impact-medium","impact-medium","impact-heavy"], i = 0;
     haptic(seq[i++]);
@@ -4893,7 +4944,7 @@
   function bootPrefs(){
     var local = loadPrefsLocal();
     syncNotifyRow();
-    if(local && prefs.onboarded){ splashState.prefs = true; revealApp(); return; }
+    if(local && prefs.onboarded){ splashState.prefs = true; runLaunchCheck(); return; }
     var cs = null;
     try{ if(tg && tg.CloudStorage && inTelegram() && tg.isVersionAtLeast("6.9")) cs = tg.CloudStorage; }catch(e){}
     if(!cs){ startOnboarding(); return; }
@@ -4903,7 +4954,7 @@
       if(done) return; done=true; clearTimeout(t);
       if(!err && v){ try{ Object.assign(prefs, JSON.parse(v)); }catch(e){} }
       syncNotifyRow();
-      if(prefs.onboarded){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }catch(e){} splashState.prefs = true; revealApp(); } else startOnboarding();
+      if(prefs.onboarded){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }catch(e){} splashState.prefs = true; runLaunchCheck(); } else startOnboarding();
     });
   }
 
