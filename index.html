@@ -599,6 +599,70 @@
   .md strong{font-weight:600;}
   .md a{color:var(--fg);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--fg-tertiary);}
   .md blockquote{margin:0 0 16px;padding:12px 16px;background:var(--fill);border-radius:var(--radius-sm);font:400 15px/1.55 'Inter',sans-serif;color:var(--fg-secondary);}
+
+  /* ---- rich article blocks (content/articles/*.md directives) ---- */
+  .blk{margin:0 0 16px;border-radius:var(--radius-lg);background:var(--elevated);box-shadow:var(--shadow-card);padding:16px;}
+  .blk-hd{display:flex;align-items:center;gap:8px;font:700 12px 'Inter',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-secondary);margin-bottom:12px;}
+  .blk-hd svg{width:18px;height:18px;color:var(--amber);flex:none;}
+  .blk ul{margin:0;padding-left:20px;font:400 15.5px/1.5 'Inter',sans-serif;color:var(--fg);}
+  .blk li{margin:0 0 9px;}
+  .blk li:last-child{margin-bottom:0;}
+  .blk li::marker{color:var(--fg);}
+  .sec-no{font:600 13px 'Inter',sans-serif;letter-spacing:.08em;color:var(--fg-tertiary);margin:34px 0 4px;}
+  .md h2{margin-top:6px;scroll-margin-top:16px;}
+  .md h3{scroll-margin-top:16px;}
+  .md h3 .h3-no{display:block;font:600 12px 'Inter',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-tertiary);margin-bottom:3px;}
+  .toc-top{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .toc-top svg{width:20px;height:20px;flex:none;}
+  .toc-top b{font:600 17px 'Inter',sans-serif;flex:1;}
+  .toc-top span{font:400 14px 'Inter',sans-serif;color:var(--fg-tertiary);}
+  .toc-row{display:flex;gap:14px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--separator);padding:13px 0;font:400 15.5px/1.35 'Inter',sans-serif;color:var(--fg);cursor:pointer;}
+  .toc-row:first-of-type{border-top:0;}
+  .toc-row i{font:600 13px/1.6 'Inter',sans-serif;font-style:normal;color:var(--fg-tertiary);min-width:20px;}
+  .toc-row.more{display:none;}
+  .toc.open .toc-row.more{display:flex;}
+  .toc-more{display:flex;align-items:center;gap:6px;background:none;border:0;border-top:1px solid var(--separator);width:100%;padding:13px 0 2px;font:600 15px 'Inter',sans-serif;color:var(--fg);cursor:pointer;}
+  .toc-more svg{width:16px;height:16px;transition:transform .25s ease;}
+  .toc.open .toc-more svg{transform:rotate(180deg);}
+  .lcard{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:0;margin:0 0 16px;padding:14px;border-radius:var(--radius-lg);background:var(--elevated);box-shadow:var(--shadow-card);cursor:pointer;transition:transform .15s ease;}
+  .lcard:active{transform:scale(.98);}
+  .lic{flex:none;width:52px;height:52px;border-radius:15px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--fg);}
+  .lic svg{width:24px;height:24px;}
+  .ltx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ltx b{font:600 16px/1.3 'Inter',sans-serif;color:var(--fg);}
+  .ltx small{font:400 13.5px/1.4 'Inter',sans-serif;color:var(--fg-secondary);}
+  .larr{flex:none;width:20px;height:20px;color:var(--fg-tertiary);}
+  .term{display:flex;gap:14px;padding:14px 0;border-top:1px solid var(--separator);}
+  .term:first-child{border-top:0;padding-top:2px;}
+  .term:last-child{padding-bottom:2px;}
+  .term::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--fg);margin-top:9px;}
+  .term b{display:block;font:600 16px/1.35 'Inter',sans-serif;margin-bottom:2px;}
+  .term span{font:400 14.5px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
+  .cmp-tabs{display:flex;gap:4px;padding:3px;border-radius:12px;background:var(--fill);margin-bottom:14px;}
+  .cmp-tab{flex:1;border:0;background:none;padding:9px 6px;border-radius:10px;font:600 13.5px 'Inter',sans-serif;color:var(--fg-secondary);cursor:pointer;transition:background .2s ease,color .2s ease;}
+  .cmp-tab.on{background:var(--elevated);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  .cmp-p{display:none;}
+  .cmp-p.on{display:block;animation:cmpin .25s ease;}
+  @keyframes cmpin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .fact{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:13px 0;border-top:1px solid var(--separator);}
+  .fact:first-of-type{border-top:0;padding-top:2px;}
+  .fact:last-child{padding-bottom:2px;}
+  .fact b{display:block;font:600 15.5px/1.35 'Inter',sans-serif;}
+  .fact small{display:block;font:400 13px/1.4 'Inter',sans-serif;color:var(--fg-secondary);margin-top:2px;}
+  .fact span{font:700 19px/1.2 'Inter',sans-serif;white-space:nowrap;text-align:right;}
+  .blk-title{font:600 17px 'Inter',sans-serif;margin:0 0 12px;}
+  .chk-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;}
+  .chk-top b{font:600 17px 'Inter',sans-serif;}
+  .chk-top span{font:500 14px 'Inter',sans-serif;color:var(--fg-secondary);}
+  .chk-bar{height:5px;border-radius:3px;background:var(--fill);overflow:hidden;margin-bottom:6px;}
+  .chk-bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:3px;transition:width .3s ease;}
+  .chk-i{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--separator);padding:12px 0;font:400 15.5px/1.35 'Inter',sans-serif;color:var(--fg);cursor:pointer;}
+  .chk-i:first-of-type{border-top:0;}
+  .chk-box{flex:none;width:24px;height:24px;border-radius:50%;border:1.8px solid var(--fg-tertiary);display:flex;align-items:center;justify-content:center;color:transparent;transition:background .2s ease,border-color .2s ease,color .2s ease,transform .2s ease;}
+  .chk-box svg{width:14px;height:14px;}
+  .chk-i.on .chk-box{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+  .chk-i.on span:last-child{color:var(--fg-secondary);}
+  .chk-i:active .chk-box{transform:scale(.9);}
   .callout{display:flex;gap:12px;margin:0 0 16px;padding:14px 16px;border-radius:var(--radius-md);background:var(--fill);}
   .callout-ic{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:1px;}
   .callout-ic svg{width:15px;height:15px;}
@@ -836,7 +900,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 06.10 gate7</div>
+        <div class="pf-build" id="pfBuild">сборка 06.10 gate8</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4538,13 +4602,67 @@
     "внимание":{cls:"c-warn", title:"Обратите внимание", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><path d="M12 17.4v.1"/></svg>'},
     "заметка": {cls:"c-note", title:"Примечание", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 11v6"/><path d="M12 7v.1"/></svg>'}
   };
+  function ico(p, w){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(w||1.8)+'" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'; }
+  var ICO = {
+    bolt: ico('<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>'),
+    list: ico('<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke-width="2.6"/>'),
+    telegram: ico('<path d="M21.5 3.5L2.8 10.7l6.2 2.4 2.4 6.2z"/><path d="M9 13.1l12.5-9.6"/>'),
+    link: ico('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'),
+    book: ico('<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>'),
+    share: ico('<path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'),
+    arrow: ico('<path d="M7 17L17 7"/><path d="M8 7h9v9"/>', 2),
+    chev: ico('<path d="M6 9l6 6 6-6"/>', 2.2),
+    check: ico('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 3)
+  };
+  function mdBlock(type, lines, ctx){
+    var o={}, items=[];
+    lines.forEach(function(x){ var m; if((m=x.match(/^-\s+(.*)$/))) items.push(m[1]); else if((m=x.match(/^(\w+):\s*(.*)$/))) o[m[1]]=m[2]; });
+    if(type==="short"){
+      return '<div class="blk short"><div class="blk-hd">'+ICO.bolt+'Коротко</div><ul>'+items.map(function(t){ return '<li>'+mdInline(t)+'</li>'; }).join("")+'</ul></div>';
+    }
+    if(type==="toc"){
+      var n=ctx.secs.length, rows=ctx.secs.map(function(t,k){
+        return '<button class="toc-row'+(k>=5?' more':'')+'" data-toc="sec-'+(k+1)+'"><i>'+(k<9?'0':'')+(k+1)+'</i><span>'+mdInline(t)+'</span></button>';
+      }).join("");
+      var more = n>5 ? '<button class="toc-more" data-more="1"><span>Ещё '+(n-5)+' '+(n-5===1?'раздел':(n-5<5?'раздела':'разделов'))+'</span>'+ICO.chev+'</button>' : '';
+      return '<div class="blk toc"><div class="toc-top">'+ICO.list+'<b>Содержание</b><span>'+n+' '+(n<5?'раздела':'разделов')+'</span></div>'+rows+more+'</div>';
+    }
+    if(type==="link"){
+      var u=o.url||"", at = /^app:/.test(u) ? ' data-app="'+esc(u.slice(4))+'"' : (u==="share" ? ' data-share="1"' : ' data-url="'+esc(u)+'"');
+      return '<button class="lcard"'+at+'><span class="lic">'+(ICO[o.icon]||ICO.link)+'</span><span class="ltx"><b>'+mdInline(o.title||"")+'</b><small>'+mdInline(o.desc||"")+'</small></span><span class="larr">'+ICO.arrow+'</span></button>';
+    }
+    if(type==="terms"){
+      return '<div class="blk terms">'+items.map(function(t){ var k=t.indexOf(": "); return '<div class="term"><div><b>'+mdInline(k<0?t:t.slice(0,k))+'</b>'+(k<0?'':'<span>'+mdInline(t.slice(k+2))+'</span>')+'</div></div>'; }).join("")+'</div>';
+    }
+    if(type==="facts"){
+      return '<div class="blk facts">'+(o.title?'<div class="blk-title">'+mdInline(o.title)+'</div>':'')+items.map(function(t){ var a=t.split(" | "); return '<div class="fact"><div><b>'+mdInline(a[0]||"")+'</b>'+(a[2]?'<small>'+mdInline(a[2])+'</small>':'')+'</div><span>'+mdInline(a[1]||"")+'</span></div>'; }).join("")+'</div>';
+    }
+    if(type==="checklist"){
+      return '<div class="blk chk" data-total="'+items.length+'"><div class="chk-top"><b>'+mdInline(o.title||"Чек-лист")+'</b><span class="chk-n">0 из '+items.length+'</span></div><div class="chk-bar"><i></i></div>'+items.map(function(t){ return '<button class="chk-i" data-chk="1"><span class="chk-box">'+ICO.check+'</span><span>'+mdInline(t)+'</span></button>'; }).join("")+'</div>';
+    }
+    if(type==="compare"){
+      var tabs=[], cur=null;
+      lines.forEach(function(x){ var m;
+        if((m=x.match(/^tab:\s*(.*)$/))){ cur={name:m[1],rows:[],text:""}; tabs.push(cur); }
+        else if(cur && (m=x.match(/^text:\s*(.*)$/))) cur.text=m[1];
+        else if(cur && (m=x.match(/^-\s+(.*)$/))) cur.rows.push(m[1]);
+      });
+      return '<div class="blk cmp"><div class="cmp-tabs">'+tabs.map(function(t,k){ return '<button class="cmp-tab'+(k===0?' on':'')+'" data-tab="'+k+'">'+mdInline(t.name)+'</button>'; }).join("")+'</div>'+
+        tabs.map(function(t,k){ return '<div class="cmp-p'+(k===0?' on':'')+'" data-p="'+k+'">'+t.rows.map(function(r){ var a=r.split(": "); return '<div class="fact"><div><b>'+mdInline(a[0])+'</b></div><span>'+mdInline(a.slice(1).join(": "))+'</span></div>'; }).join("")+(t.text?'<p style="margin:12px 0 0;font-size:14.5px;line-height:1.5;color:var(--fg-secondary)">'+mdInline(t.text)+'</p>':'')+'</div>'; }).join("")+'</div>';
+    }
+    return "";
+  }
   function mdRender(md){
     var out=[], lines=md.replace(/\r/g,"").split("\n"), i=0;
+    var ctx={secs:[]}; lines.forEach(function(x){ var m=x.match(/^##\s+(.*)/); if(m) ctx.secs.push(m[1]); });
+    var h2n=0;
     while(i<lines.length){
       var l=lines[i];
       if(!l.trim()){ i++; continue; }
       var m;
-      if((m=l.match(/^(#{2,3})\s+(.*)/))){ out.push('<h'+m[1].length+'>'+mdInline(m[2])+'</h'+m[1].length+'>'); i++; continue; }
+      if((m=l.match(/^:::(\w+)\s*$/))){ var bl=[]; i++; while(i<lines.length && !/^:::\s*$/.test(lines[i])){ bl.push(lines[i]); i++; } i++; out.push(mdBlock(m[1], bl, ctx)); continue; }
+      if((m=l.match(/^##\s+(.*)/))){ h2n++; out.push('<div class="sec-no">'+(h2n<10?'0':'')+h2n+'</div><h2 id="sec-'+h2n+'">'+mdInline(m[1])+'</h2>'); i++; continue; }
+      if((m=l.match(/^###\s+(.*)/))){ var hm=m[1].match(/^(\d+)\.\s+(.*)/); out.push(hm ? '<h3><span class="h3-no">Критерий '+hm[1]+'</span>'+mdInline(hm[2])+'</h3>' : '<h3>'+mdInline(m[1])+'</h3>'); i++; continue; }
       if(/^---+\s*$/.test(l)){ out.push('<hr>'); i++; continue; }
       if(/^!\[[^\]]*\]\([^)]+\)\s*$/.test(l)){ out.push(mdInline(l)); i++; continue; }
       if(/^>\s?/.test(l)){
@@ -4561,10 +4679,37 @@
       }
       if(/^\s*[-*]\s+/.test(l)){ var u=[]; while(i<lines.length && /^\s*[-*]\s+/.test(lines[i])){ u.push('<li>'+mdInline(lines[i].replace(/^\s*[-*]\s+/,""))+'</li>'); i++; } out.push('<ul>'+u.join("")+'</ul>'); continue; }
       if(/^\s*\d+[.)]\s+/.test(l)){ var o=[]; while(i<lines.length && /^\s*\d+[.)]\s+/.test(lines[i])){ o.push('<li>'+mdInline(lines[i].replace(/^\s*\d+[.)]\s+/,""))+'</li>'); i++; } out.push('<ol>'+o.join("")+'</ol>'); continue; }
-      var p=[]; while(i<lines.length && lines[i].trim() && !/^(#{2,3}\s|---+\s*$|>|\s*[-*]\s+|\s*\d+[.)]\s+)/.test(lines[i])){ p.push(lines[i]); i++; }
+      var p=[]; while(i<lines.length && lines[i].trim() && !/^(#{2,3}\s|---+\s*$|>|:::|\s*[-*]\s+|\s*\d+[.)]\s+)/.test(lines[i])){ p.push(lines[i]); i++; }
       out.push('<p>'+mdInline(p.join(" "))+'</p>');
     }
     return out.join("\n");
+  }
+  // interactions inside rich articles (delegated, wired in openDetail)
+  function openUrl(h){
+    try{ if(/^https:\/\/t\.me\//.test(h) && tg.openTelegramLink) tg.openTelegramLink(h); else if(tg.openLink) tg.openLink(h); else window.open(h,"_blank"); }catch(x){ window.open(h,"_blank"); }
+  }
+  function wireArticle(view){
+    view.onclick = function(e){
+      var t = e.target.closest("[data-toc],[data-url],[data-app],[data-share],[data-chk],[data-tab],[data-more]");
+      if(!t) return;
+      if(t.hasAttribute("data-toc")){ haptic("impact-light"); var el=document.getElementById(t.getAttribute("data-toc")); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); }
+      else if(t.hasAttribute("data-more")){ haptic("impact-light"); t.closest(".toc").classList.toggle("open"); var sp=t.querySelector("span"), op=t.closest(".toc").classList.contains("open"); if(op){ t.setAttribute("data-label", sp.textContent); sp.textContent="Свернуть"; } else sp.textContent=t.getAttribute("data-label")||sp.textContent; }
+      else if(t.hasAttribute("data-url")){ haptic("impact-light"); openUrl(t.getAttribute("data-url")); }
+      else if(t.hasAttribute("data-app")){ openDetail(t.getAttribute("data-app")); }
+      else if(t.hasAttribute("data-share")){ var cs=SECTIONS.find(function(x){ return x.id===state.selectedId; }); if(cs) shareSection(cs); }
+      else if(t.hasAttribute("data-tab")){
+        haptic("selection"); var box=t.closest(".cmp"), k=t.getAttribute("data-tab");
+        Array.prototype.forEach.call(box.querySelectorAll(".cmp-tab"), function(b){ b.classList.toggle("on", b.getAttribute("data-tab")===k); });
+        Array.prototype.forEach.call(box.querySelectorAll(".cmp-p"), function(b){ b.classList.toggle("on", b.getAttribute("data-p")===k); });
+      }
+      else if(t.hasAttribute("data-chk")){
+        t.classList.toggle("on"); haptic("selection");
+        var cb=t.closest(".chk"), tot=+cb.getAttribute("data-total"), dn=cb.querySelectorAll(".chk-i.on").length;
+        cb.querySelector(".chk-n").textContent = dn+" из "+tot;
+        cb.querySelector(".chk-bar i").style.width = Math.round(dn/tot*100)+"%";
+        if(dn===tot){ haptic("success"); toast("Все пункты проверены"); }
+      }
+    };
   }
   function readMins(md){ return Math.max(1, Math.round(md.split(/\s+/).length/170)); }
 
@@ -4642,6 +4787,7 @@
         '<div class="art-meta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'+readMins(s._md)+' мин чтения</div>'+
         '<p class="art-lead">'+s.desc+'</p>'+
         '<div class="md">'+mdRender(s._md)+'</div>';
+      wireArticle(view);
       document.getElementById("backBtn").addEventListener("click", closeDetail);
       document.getElementById("shareBtn").addEventListener("click", function(){ shareSection(s); });
       var sb=document.getElementById("starBtn"); sb.classList.toggle("active", isFav);
