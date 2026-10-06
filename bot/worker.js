@@ -73,6 +73,15 @@ const json = (obj, status = 200, extra = {}) =>
 const addSub = (env, id) => env.SUBS.put(`u:${id}`, JSON.stringify({ ts: Date.now() }));
 const delSub = (env, id) => env.SUBS.delete(`u:${id}`);
 
+// short rolling log of incoming updates, readable by the owner with /debug
+async function dbg(env, entry) {
+  try {
+    const cur = JSON.parse((await env.SUBS.get("dbg")) || "[]");
+    cur.unshift({ t: new Date().toISOString().slice(11, 19), ...entry });
+    await env.SUBS.put("dbg", JSON.stringify(cur.slice(0, 8)));
+  } catch (e) {}
+}
+
 // ---------- bot logic ----------
 async function sendWelcome(env, chatId) {
   return tg(env, "sendMessage", {
@@ -96,6 +105,7 @@ async function handleUpdate(env, ctx, upd) {
   }
   const m = upd.message;
   if (!m || !m.text) return;
+  await dbg(env, { from: m.from && m.from.id, chat: m.chat.type, text: String(m.text).slice(0, 24) });
   const chatId = m.chat.id;
   const text = m.text.trim();
   const isOwner = String(m.from.id) === String(env.OWNER_ID);
@@ -109,10 +119,28 @@ async function handleUpdate(env, ctx, upd) {
 
   if (/^\/start(\s|$)/.test(text)) {
     await addSub(env, chatId);
-    await sendWelcome(env, chatId);
+    const w = await sendWelcome(env, chatId);
+    await dbg(env, { welcome: w && w.ok ? "sent" : "FAILED: " + (w && w.description) });
     return;
   }
   if (!isOwner) return;
+
+  if (/^\/debug/.test(text)) {
+    const wh = await tg(env, "getWebhookInfo");
+    const me = await tg(env, "getMe");
+    const log = JSON.parse((await env.SUBS.get("dbg")) || "[]");
+    const r = wh.result || {};
+    const lines = [
+      `Бот: @${me.result && me.result.username}`,
+      `Вебхук: ${r.url ? "задан" : "НЕ ЗАДАН"}, в очереди: ${r.pending_update_count}`,
+      `Последняя ошибка доставки: ${r.last_error_message || "нет"}`,
+      "",
+      "Последние события:",
+      ...log.map((e) => `${e.t} ` + (e.welcome ? `приветствие: ${e.welcome}` : `от ${e.from} (${e.chat}): ${e.text}`)),
+    ];
+    await tg(env, "sendMessage", { chat_id: chatId, text: lines.join("\n") });
+    return;
+  }
 
   if (/^\/stats/.test(text)) {
     let n = 0, cursor;
