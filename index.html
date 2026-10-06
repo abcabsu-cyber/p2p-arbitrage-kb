@@ -713,6 +713,11 @@
   .callout.c-old .callout-ic svg{width:13px;height:13px;}
   .callout.c-old .callout-title{color:var(--danger);font-size:12px;margin:2px 0 3px;}
   .callout.c-old .callout-body p{font-size:14px;line-height:1.5;color:var(--fg-secondary);}
+  .callout.c-bonus{padding:10px 13px;gap:10px;background:color-mix(in srgb,var(--accent) 9%,var(--canvas));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 22%,transparent);}
+  .callout.c-bonus .callout-ic{width:22px;height:22px;margin-top:0;background:var(--accent);color:var(--on-accent);}
+  .callout.c-bonus .callout-ic svg{width:12px;height:12px;}
+  .callout.c-bonus .callout-title{font-size:11px;margin:2px 0 2px;color:var(--fg);}
+  .callout.c-bonus .callout-body p{font-size:13px;line-height:1.45;color:var(--fg-secondary);}
   .callout.c-note .callout-ic{background:color-mix(in srgb,var(--fg) 14%,transparent);color:var(--fg-secondary);}
   .callout.c-note .callout-title,.callout.c-note p{color:var(--fg-secondary);}
   .md hr{border:none;height:1px;background:var(--separator);margin:24px 0;}
@@ -937,7 +942,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 07.10 gate19</div>
+        <div class="pf-build" id="pfBuild">сборка 07.10 gate20</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4638,6 +4643,7 @@
     "важно":   {cls:"c-imp",  title:"Важно",  svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v9"/><path d="M12 19.2v.1"/></svg>'},
     "внимание":{cls:"c-warn", title:"Обратите внимание", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><path d="M12 17.4v.1"/></svg>'},
     "неактуально": {cls:"c-old", title:"Неактуально", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>'},
+    "бонус": {cls:"c-bonus", title:"Бонус", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/></svg>'},
     "заметка": {cls:"c-note", title:"Примечание", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 11v6"/><path d="M12 7v.1"/></svg>'}
   };
   function ico(p, w){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(w||1.8)+'" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'; }
@@ -4713,7 +4719,7 @@
       if(/^!\[[^\]]*\]\([^)]+\)\s*$/.test(l)){ out.push(mdInline(l)); i++; continue; }
       if(/^>\s?/.test(l)){
         var q=[]; while(i<lines.length && /^>\s?/.test(lines[i])){ q.push(lines[i].replace(/^>\s?/,"")); i++; }
-        var cm=q[0].match(/^\[!(важно|внимание|заметка|неактуально)\]\s*(.*)$/i);
+        var cm=q[0].match(/^\[!(важно|внимание|заметка|неактуально|бонус)\]\s*(.*)$/i);
         if(cm){
           var kind=cm[1].toLowerCase(), meta=CALLOUTS[kind], paras=[], cur=[];
           if(cm[2]) cur.push(cm[2]);
