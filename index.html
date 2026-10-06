@@ -811,7 +811,8 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build">сборка 06.10 locked</div>
+        <div class="pf-build" id="pfBuild">сборка 06.10 dev</div>
+        <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
 
@@ -4906,6 +4907,20 @@
     });
   }
 
+  // DEV ONLY: tap the build stamp 5 times to reveal a reset button (welcome screen shows again).
+  (function(){
+    var n=0, t; var stamp=document.getElementById("pfBuild"), btn=document.getElementById("devReset");
+    stamp.addEventListener("click", function(){
+      n++; clearTimeout(t); t=setTimeout(function(){ n=0; },1500);
+      if(n>=5){ n=0; haptic("success"); btn.hidden=false; btn.style.display="block"; }
+    });
+    btn.addEventListener("click", function(){
+      try{ localStorage.removeItem(PREF_KEY); }catch(e){}
+      var done=false; function go(){ if(done) return; done=true; location.reload(); }
+      try{ if(tg && tg.CloudStorage && inTelegram() && tg.isVersionAtLeast("6.9")){ tg.CloudStorage.removeItem(PREF_KEY, go); setTimeout(go,800); return; } }catch(e){}
+      go();
+    });
+  })();
   startLaunchRamp();
   bootPrefs();
 
