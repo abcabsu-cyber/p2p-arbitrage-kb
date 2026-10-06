@@ -599,6 +599,21 @@
   .md strong{font-weight:600;}
   .md a{color:var(--fg);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--fg-tertiary);}
   .md blockquote{margin:0 0 16px;padding:12px 16px;background:var(--fill);border-radius:var(--radius-sm);font:400 15px/1.55 'Inter',sans-serif;color:var(--fg-secondary);}
+  .callout{display:flex;gap:12px;margin:0 0 16px;padding:14px 16px;border-radius:var(--radius-md);background:var(--fill);}
+  .callout-ic{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+  .callout-ic svg{width:15px;height:15px;}
+  .callout-body{min-width:0;flex:1;}
+  .callout-title{font:700 13px/1.3 'Inter',sans-serif;letter-spacing:.04em;text-transform:uppercase;margin:3px 0 5px;}
+  .callout-body p{font:400 15px/1.55 'Inter',sans-serif;margin:0 0 8px;}
+  .callout-body p:last-child{margin-bottom:0;}
+  .callout.c-imp{background:color-mix(in srgb,var(--fg) 7%,var(--canvas));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--fg) 14%,transparent);}
+  .callout.c-imp .callout-ic{background:var(--accent);color:var(--on-accent);}
+  .callout.c-imp .callout-title{color:var(--fg);}
+  .callout.c-warn{background:color-mix(in srgb,#f5a524 15%,var(--canvas));}
+  .callout.c-warn .callout-ic{background:#f5a524;color:#1c1c1e;}
+  .callout.c-warn .callout-title{color:color-mix(in srgb,#b36b00 80%,var(--fg));}
+  .callout.c-note .callout-ic{background:color-mix(in srgb,var(--fg) 14%,transparent);color:var(--fg-secondary);}
+  .callout.c-note .callout-title,.callout.c-note p{color:var(--fg-secondary);}
   .md hr{border:none;height:1px;background:var(--separator);margin:24px 0;}
   .md img{display:block;width:100%;border-radius:var(--radius-md);margin:0 0 16px;}
   .md code{font:500 14px ui-monospace,Menlo,monospace;background:var(--fill);padding:2px 6px;border-radius:5px;}
@@ -821,7 +836,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 06.10 gate6</div>
+        <div class="pf-build" id="pfBuild">сборка 06.10 gate7</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4518,6 +4533,11 @@
     t = t.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>').replace(/`([^`]+)`/g,'<code>$1</code>');
     return t;
   }
+  var CALLOUTS = {
+    "важно":   {cls:"c-imp",  title:"Важно",  svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v9"/><path d="M12 19.2v.1"/></svg>'},
+    "внимание":{cls:"c-warn", title:"Обратите внимание", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><path d="M12 17.4v.1"/></svg>'},
+    "заметка": {cls:"c-note", title:"Примечание", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 11v6"/><path d="M12 7v.1"/></svg>'}
+  };
   function mdRender(md){
     var out=[], lines=md.replace(/\r/g,"").split("\n"), i=0;
     while(i<lines.length){
@@ -4527,7 +4547,18 @@
       if((m=l.match(/^(#{2,3})\s+(.*)/))){ out.push('<h'+m[1].length+'>'+mdInline(m[2])+'</h'+m[1].length+'>'); i++; continue; }
       if(/^---+\s*$/.test(l)){ out.push('<hr>'); i++; continue; }
       if(/^!\[[^\]]*\]\([^)]+\)\s*$/.test(l)){ out.push(mdInline(l)); i++; continue; }
-      if(/^>\s?/.test(l)){ var q=[]; while(i<lines.length && /^>\s?/.test(lines[i])){ q.push(lines[i].replace(/^>\s?/,"")); i++; } out.push('<blockquote>'+mdInline(q.join(" "))+'</blockquote>'); continue; }
+      if(/^>\s?/.test(l)){
+        var q=[]; while(i<lines.length && /^>\s?/.test(lines[i])){ q.push(lines[i].replace(/^>\s?/,"")); i++; }
+        var cm=q[0].match(/^\[!(важно|внимание|заметка)\]\s*(.*)$/i);
+        if(cm){
+          var kind=cm[1].toLowerCase(), meta=CALLOUTS[kind], paras=[], cur=[];
+          if(cm[2]) cur.push(cm[2]);
+          q.slice(1).forEach(function(x){ if(!x.trim()){ if(cur.length) paras.push(cur.join(" ")); cur=[]; } else cur.push(x); });
+          if(cur.length) paras.push(cur.join(" "));
+          out.push('<div class="callout '+meta.cls+'"><div class="callout-ic">'+meta.svg+'</div><div class="callout-body"><div class="callout-title">'+meta.title+'</div>'+paras.map(function(x){ return '<p>'+mdInline(x)+'</p>'; }).join("")+'</div></div>');
+        } else out.push('<blockquote>'+mdInline(q.join(" "))+'</blockquote>');
+        continue;
+      }
       if(/^\s*[-*]\s+/.test(l)){ var u=[]; while(i<lines.length && /^\s*[-*]\s+/.test(lines[i])){ u.push('<li>'+mdInline(lines[i].replace(/^\s*[-*]\s+/,""))+'</li>'); i++; } out.push('<ul>'+u.join("")+'</ul>'); continue; }
       if(/^\s*\d+[.)]\s+/.test(l)){ var o=[]; while(i<lines.length && /^\s*\d+[.)]\s+/.test(lines[i])){ o.push('<li>'+mdInline(lines[i].replace(/^\s*\d+[.)]\s+/,""))+'</li>'); i++; } out.push('<ol>'+o.join("")+'</ol>'); continue; }
       var p=[]; while(i<lines.length && lines[i].trim() && !/^(#{2,3}\s|---+\s*$|>|\s*[-*]\s+|\s*\d+[.)]\s+)/.test(lines[i])){ p.push(lines[i]); i++; }
