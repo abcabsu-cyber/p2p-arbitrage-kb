@@ -955,7 +955,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 07.10 gate26</div>
+        <div class="pf-build" id="pfBuild">сборка 07.10 gate27</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4662,6 +4662,7 @@
     "внимание":{cls:"c-warn", title:"Обратите внимание", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><path d="M12 17.4v.1"/></svg>'},
     "неактуально": {cls:"c-old", title:"Неактуально", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>'},
     "бонус": {cls:"c-bonus", title:"Бонус", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/></svg>'},
+    "примечание": {cls:"c-old", title:"Примечание", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>'},
     "заметка": {cls:"c-note", title:"Примечание", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 11v6"/><path d="M12 7v.1"/></svg>'}
   };
   function ico(p, w){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(w||1.8)+'" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'; }
@@ -4737,7 +4738,7 @@
       if(/^!\[[^\]]*\]\([^)]+\)\s*$/.test(l)){ out.push(mdInline(l)); i++; continue; }
       if(/^>\s?/.test(l)){
         var q=[]; while(i<lines.length && /^>\s?/.test(lines[i])){ q.push(lines[i].replace(/^>\s?/,"")); i++; }
-        var cm=q[0].match(/^\[!(важно|внимание|заметка|неактуально|бонус)\]\s*(.*)$/i);
+        var cm=q[0].match(/^\[!(важно|внимание|заметка|неактуально|бонус|примечание)\]\s*(.*)$/i);
         if(cm){
           var kind=cm[1].toLowerCase(), meta=CALLOUTS[kind], paras=[], cur=[];
           if(cm[2]) cur.push(cm[2]);
