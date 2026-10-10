@@ -725,6 +725,10 @@
   .callout.c-note .callout-ic{background:color-mix(in srgb,var(--fg) 14%,transparent);color:var(--fg-secondary);}
   .callout.c-note .callout-title,.callout.c-note p{color:var(--fg-secondary);}
   .md hr{border:none;height:1px;background:var(--separator);margin:24px 0;}
+  .blk.vid{margin:4px 0 20px;}
+  .vid-frame{position:relative;width:100%;border-radius:22px;overflow:hidden;background:#0c0c0d;box-shadow:0 10px 28px rgba(0,0,0,.18),inset 0 0 0 1px var(--separator);}
+  .vid-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .blk.vid figcaption{padding:10px 4px 0;font:400 14px/1.4 'Inter',sans-serif;color:var(--fg-tertiary);}
   .md .shot{display:block;margin:4px 0 18px;padding:9px 9px 0;border-radius:22px;background:linear-gradient(145deg,color-mix(in srgb,var(--fg) 9%,var(--canvas)),color-mix(in srgb,var(--fg) 3%,var(--canvas)) 55%,color-mix(in srgb,#f5a524 14%,var(--canvas)));box-shadow:inset 0 0 0 1px var(--separator);}
   .md .shot img{display:block;width:100%;height:auto;border-radius:14px;margin:0;cursor:zoom-in;box-shadow:0 6px 18px rgba(0,0,0,.14);}
   .md .shot-cap{display:flex;align-items:center;gap:6px;padding:9px 6px 10px;font:500 12px/1.3 'Inter',sans-serif;color:var(--fg-tertiary);}
@@ -955,7 +959,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 07.10 gate27</div>
+        <div class="pf-build" id="pfBuild">сборка 10.10 gate28</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4694,6 +4698,10 @@
       var u=o.url||"", ext = /^https?:\/\//.test(u), tag = ext ? 'a' : 'button',
           at = /^app:/.test(u) ? ' data-app="'+esc(u.slice(4))+'"' : (u==="share" ? ' data-share="1"' : ' data-url="'+esc(u)+'" href="'+esc(u)+'" target="_blank" rel="noopener"');
       return '<'+tag+' class="lcard"'+at+'><span class="lic">'+(ICO[o.icon]||ICO.link)+'</span><span class="ltx"><b>'+mdInline(o.title||"")+'</b><small>'+mdInline(o.desc||"")+'</small></span><span class="larr">'+ICO.arrow+'</span></'+tag+'>';
+    }
+    if(type==="video"){
+      var rt=(o.ratio||"16:9").split(":"), vw=+rt[0]||16, vh=+rt[1]||9;
+      return '<figure class="blk vid"><div class="vid-frame" style="aspect-ratio:'+vw+'/'+vh+'"><iframe src="https://kinescope.io/embed/'+esc(o.id||"")+'" allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer; clipboard-write; screen-wake-lock;" frameborder="0" allowfullscreen loading="lazy" title="'+esc(o.title||"Видеоурок")+'"></iframe></div>'+(o.caption?'<figcaption>'+mdInline(o.caption)+'</figcaption>':'')+'</figure>';
     }
     if(type==="terms"){
       return '<div class="blk terms">'+items.map(function(t){ var k=t.indexOf(": "); return '<div class="term"><div><b>'+mdInline(k<0?t:t.slice(0,k))+'</b>'+(k<0?'':'<span>'+mdInline(t.slice(k+2))+'</span>')+'</div></div>'; }).join("")+'</div>';
