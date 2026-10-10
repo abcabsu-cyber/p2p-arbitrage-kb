@@ -39,7 +39,17 @@
           "desc": "Еженедельная встреча с участниками комьюнити."
         }
       ],
-      "renew": "Подписка действует один месяц. Чтобы остаться в привате, участник продлевает её сам каждый месяц."
+      "renew": "Подписка действует один месяц. Чтобы остаться в привате, участник продлевает её сам каждый месяц.",
+      "reviews_title": "Отзывы участников",
+      "reviews_sub": "Что пишут участники прошлого приватного канала",
+      "reviews": [
+        "content/images/review-1.jpg",
+        "content/images/review-2.jpg",
+        "content/images/review-3.jpg",
+        "content/images/review-4.jpg",
+        "content/images/review-5.jpg",
+        "content/images/review-6.jpg"
+      ]
     },
     {
       "id": "start",

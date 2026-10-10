@@ -593,6 +593,17 @@
   .pv-tx{min-width:0;display:flex;flex-direction:column;gap:3px;}
   .pv-tx b{font:600 16px/1.3 'Inter',sans-serif;color:var(--fg);}
   .pv-tx small{font:400 14px/1.45 'Inter',sans-serif;color:var(--fg-secondary);}
+  .pv-rev{margin:26px 0 0;overflow:hidden;padding:20px 0 14px;background:#0c0c0d;border-radius:var(--radius-lg);color:#fff;}
+  .pv-rev-hd{padding:0 20px;}
+  .pv-rev-hd span{font:600 11px 'Inter',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55);}
+  .pv-rev-hd h3{font:700 22px/1.2 'Inter',sans-serif;letter-spacing:-.02em;margin:8px 0 16px;color:#fff;}
+  .pv-rail{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:0 16px 4px;scroll-padding-left:16px;align-items:center;scrollbar-width:none;overscroll-behavior-x:contain;}
+  .pv-rail::-webkit-scrollbar{display:none;}
+  .pv-card{flex:none;width:84%;max-width:340px;margin:0;scroll-snap-align:start;border-radius:20px;overflow:hidden;background:#1c1c1f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);display:flex;align-items:center;}
+  .pv-card img{display:block;width:100%;height:auto;cursor:zoom-in;}
+  .pv-dots{display:flex;justify-content:center;gap:6px;margin-top:14px;}
+  .pv-dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.28);transition:all .2s;}
+  .pv-dots i.on{width:18px;border-radius:3px;background:#f6c445;}
   .pv-renew{margin-top:14px;padding:14px 16px;border-radius:var(--radius-md);background:color-mix(in srgb,#f5a524 14%,var(--canvas));display:flex;flex-direction:column;gap:4px;box-shadow:inset 0 0 0 1px color-mix(in srgb,#f5a524 30%,transparent);}
   .pv-renew b{font:700 13px 'Inter',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:color-mix(in srgb,#b36b00 80%,var(--fg));}
   .pv-renew span{font:400 14px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
@@ -985,7 +996,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 10.10 gate31</div>
+        <div class="pf-build" id="pfBuild">сборка 10.10 gate33</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -5081,9 +5092,23 @@
         '<div class="pv-lead">'+esc(p.desc)+'</div>'+
         '<div class="outline-title">Что внутри</div>'+
         '<div class="pv-list">'+rows+'</div>'+
+        (p.reviews&&p.reviews.length ? '<div class="pv-rev"><div class="pv-rev-hd"><span>'+esc(p.reviews_title||"Отзывы")+'</span><h3>'+esc(p.reviews_sub||"")+'</h3></div>'+
+          '<div class="pv-rail" id="pvRail">'+p.reviews.map(function(src){ return '<figure class="pv-card"><img src="'+esc(src)+'" alt="Отзыв участника" loading="lazy" decoding="async"></figure>'; }).join("")+'</div>'+
+          '<div class="pv-dots" id="pvDots">'+p.reviews.map(function(_,i){ return '<i'+(i===0?' class="on"':'')+'></i>'; }).join("")+'</div></div>' : '')+
         (p.renew?'<div class="pv-renew"><b>Как продлевается</b><span>'+esc(p.renew)+'</span></div>':'')+
         '<button class="buy-btn pv-buy" id="pvBuy">Вступить в приват</button>'+
       '</div>';
+    var rail=document.getElementById("pvRail");
+    if(rail){
+      var dots=document.getElementById("pvDots").children;
+      rail.addEventListener("scroll", function(){
+        var cards=rail.children, best=0, bd=1e9;
+        for(var i=0;i<cards.length;i++){ var dd=Math.abs(cards[i].offsetLeft-rail.scrollLeft-16); if(dd<bd){ bd=dd; best=i; } }
+        if(rail.scrollLeft+rail.clientWidth>=rail.scrollWidth-4) best=cards.length-1;
+        for(var k=0;k<dots.length;k++) dots[k].classList.toggle("on", k===best);
+      }, {passive:true});
+      rail.addEventListener("click", function(e){ var im=e.target.closest("img"); if(im) openLightbox(im.getAttribute("src")); });
+    }
     document.getElementById("pvBuy").addEventListener("click", function(){ haptic("success"); toast(p.start ? "Приём участников откроется "+p.start : "Оплата появится после запуска"); });
   }
   function openProduct(id){
