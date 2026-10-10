@@ -589,8 +589,31 @@
   .pv-sec h3{font:700 23px/1.2 'Inter',sans-serif;letter-spacing:-.02em;margin:8px 0 0;color:var(--fg);}
   .pv-ck{flex:none;width:26px;height:26px;border-radius:50%;background:linear-gradient(145deg,#ffe9a8,#f2bf3e);color:#4a3200;display:flex;align-items:center;justify-content:center;margin-top:1px;}
   .pv-ck svg{width:14px;height:14px;}
-  .pv{padding-bottom:150px;}
-  .pv-cta{position:fixed;left:50%;transform:translateX(-50%);width:min(calc(100% - 32px),560px);bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:20;padding:10px 12px 8px;border-radius:var(--radius-lg);background:color-mix(in srgb,var(--canvas) 86%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 8px 24px rgba(0,0,0,.12),inset 0 0 0 1px var(--separator);}
+  .pv{padding-bottom:196px;}
+  .pv-cta{position:fixed;left:50%;transform:translateX(-50%);width:min(100%,460px);bottom:0;z-index:5;padding:12px 16px calc(86px + env(safe-area-inset-bottom,0px));border-radius:22px 22px 0 0;background:var(--canvas);box-shadow:0 -10px 28px rgba(0,0,0,.10),0 -1px 0 var(--separator);}
+  .tabbar{z-index:6;}
+  .pv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
+  .pv-stats div{padding:14px 8px;text-align:center;background:var(--elevated);border-radius:var(--radius-md);box-shadow:var(--shadow-card);}
+  .pv-stats b{display:block;font:700 22px 'Inter',sans-serif;letter-spacing:-.02em;background:linear-gradient(135deg,#f6c445,#d9a21b);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .pv-stats span{display:block;margin-top:4px;font:400 12px/1.3 'Inter',sans-serif;color:var(--fg-secondary);}
+  .pv-up{margin-top:4px;}
+  .pv-up u{text-decoration:none;font-weight:600;color:color-mix(in srgb,#b36b00 80%,var(--fg));}
+  .pv-auth{margin-top:14px;padding:18px;background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
+  .pv-auth-hd{display:flex;align-items:center;gap:12px;}
+  .pv-auth-hd i{flex:none;width:46px;height:46px;border-radius:50%;background:linear-gradient(145deg,#ffe9a8,#f2bf3e);color:#4a3200;font:700 16px 'Inter',sans-serif;font-style:normal;display:flex;align-items:center;justify-content:center;}
+  .pv-auth-hd b{font:700 18px/1.25 'Inter',sans-serif;color:var(--fg);}
+  .pv-auth p{margin:12px 0 0;font:400 15px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
+  .pv-chan{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding:12px 14px;border-radius:var(--radius-md);background:var(--fill);text-decoration:none;color:var(--fg);}
+  .pv-chan span{display:flex;flex-direction:column;gap:2px;}
+  .pv-chan b{font:600 15px 'Inter',sans-serif;}
+  .pv-chan small{font:400 13px 'Inter',sans-serif;color:var(--fg-tertiary);}
+  .pv-chan svg{width:18px;height:18px;flex:none;color:var(--fg-tertiary);}
+  .pv-next{display:flex;gap:14px;margin-top:14px;padding:16px;border-radius:var(--radius-lg);background:color-mix(in srgb,#f5a524 14%,var(--canvas));box-shadow:inset 0 0 0 1px color-mix(in srgb,#f5a524 30%,transparent);}
+  .pv-next-ic{flex:none;width:40px;height:40px;border-radius:12px;background:linear-gradient(145deg,#ffe9a8,#f2bf3e);color:#4a3200;display:flex;align-items:center;justify-content:center;}
+  .pv-next-ic svg{width:21px;height:21px;}
+  .pv-next b{font:700 16px 'Inter',sans-serif;color:var(--fg);}
+  .pv-next p{margin:4px 0 8px;font:400 14px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
+  .pv-next button{background:none;border:0;padding:0;font:600 14px 'Inter',sans-serif;color:color-mix(in srgb,#b36b00 80%,var(--fg));cursor:pointer;}
   .pv-cta .buy-btn{margin:0;}
   .pv-steps{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
   .pv-step{padding:16px;background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
@@ -1021,7 +1044,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 10.10 gate35</div>
+        <div class="pf-build" id="pfBuild">сборка 10.10 gate36</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -5112,7 +5135,11 @@
       return '<div class="pv-row"><span class="pv-ck">'+CHK+'</span><span class="pv-tx"><b>'+esc(b.t)+'</b>'+(b.d?'<small>'+esc(b.d)+'</small>':'')+'</span></div>';
     }).join("");
     function sec(o){ return '<div class="pv-sec"><span>'+esc(o.eyebrow)+'</span><h3>'+esc(o.title)+'</h3></div>'; }
-    function checkRows(arr){ return '<div class="pv-list">'+arr.map(function(b){ return '<div class="pv-row"><span class="pv-ck">'+CHK+'</span><span class="pv-tx"><b>'+esc(b.t)+'</b>'+(b.d?'<small>'+esc(b.d)+'</small>':'')+'</span></div>'; }).join("")+'</div>'; }
+    function checkRows(arr){ return '<div class="pv-list">'+arr.map(function(b){ return '<div class="pv-row"><span class="pv-ck">'+CHK+'</span><span class="pv-tx"><b>'+esc(b.t)+'</b>'+(b.d?'<small>'+esc(b.d)+'</small>':'')+(b.take?'<small class="pv-up"><u>Уносите:</u> '+esc(b.take)+'</small>':'')+'</span></div>'; }).join("")+'</div>'; }
+    var stats = p.stats ? '<div class="pv-stats">'+p.stats.map(function(s){ return '<div><b>'+esc(s.n)+'</b><span>'+esc(s.l)+'</span></div>'; }).join("")+'</div>' : '';
+    var au = p.author ? '<div class="pv-sec"><span>'+esc(p.author.eyebrow)+'</span></div><div class="pv-auth"><div class="pv-auth-hd"><i>'+esc(p.author.initials)+'</i><b>'+esc(p.author.name)+'</b></div><p>'+esc(p.author.text)+'</p>'+
+      (p.author.link?'<a class="pv-chan" id="pvChan" href="'+esc(p.author.link)+'"><span><b>'+esc(p.author.linkTitle)+'</b><small>'+esc(p.author.linkSub)+'</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>':'')+'</div>' : '';
+    var nx = p.next ? '<div class="pv-next"><div class="pv-next-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></div><div><b>'+esc(p.next.title)+'</b><p>'+esc(p.next.text)+'</p><button id="pvNext">'+esc(p.next.btn)+' →</button></div></div>' : '';
     var month = p.month ? sec(p.month)+'<div class="pv-steps">'+p.month.steps.map(function(s,i){
         return '<div class="pv-step"><div class="pv-step-hd"><i>'+(i+1)+'</i><b>'+esc(s.t)+'</b><em>'+esc(s.m)+'</em></div><p>'+esc(s.d)+'</p></div>';
       }).join("")+(p.month.takeaway?'<div class="pv-take">'+esc(p.month.takeaway)+'</div>':'')+'</div>' : '';
@@ -5120,11 +5147,11 @@
     var guar = p.guarantee ? '<div class="pv-guar"><span>'+esc(p.guarantee.eyebrow)+'</span><h3>'+esc(p.guarantee.title)+'</h3><p>'+esc(p.guarantee.text)+'</p></div>' : '';
     box.innerHTML =
       '<div class="pv">'+
-        '<div class="pv-hero"><span class="pv-tag">'+esc(p.eyebrow)+'</span><h2>'+esc(p.headline||p.title)+'</h2><p>'+esc(p.lead||p.sub)+'</p></div>'+
+        '<div class="pv-hero"><span class="pv-tag">'+esc(p.eyebrow)+'</span><h2>'+esc(p.headline||p.title)+'</h2><p>'+esc(p.lead||p.sub)+'</p></div>'+stats+
         '<div class="pv-sec"><span>Что входит</span><h3>'+esc(p.includeTitle||"Что вы получаете")+'</h3></div>'+
         checkRows(p.include||[])+
         month+
-        (p.gifts ? sec(p.gifts)+checkRows(p.gifts.items) : '')+
+        (p.gifts ? sec(p.gifts)+(p.gifts.sub?'<p class="pv-lead">'+esc(p.gifts.sub)+'</p>':'')+checkRows(p.gifts.items) : '')+
         (p.reviews&&p.reviews.length ? '<div class="pv-rev"><div class="pv-rev-hd"><span>'+esc(p.reviews_title||"Отзывы")+'</span><h3>'+esc(p.reviews_sub||"")+'</h3></div>'+
           '<div class="pv-rail" id="pvRail">'+p.reviews.map(function(src){ return '<figure class="pv-card"><img src="'+esc(src)+'" alt="Отзыв участника" loading="lazy" decoding="async"></figure>'; }).join("")+'</div>'+
           '<div class="pv-dots" id="pvDots">'+p.reviews.map(function(_,i){ return '<i'+(i===0?' class="on"':'')+'></i>'; }).join("")+'</div></div>' : '')+
@@ -5132,8 +5159,13 @@
         (p.audience ? sec(p.audience)+checkRows(p.audience.items) : '')+
         faq+
         (p.renew?'<div class="pv-renew"><b>Как продлевается</b><span>'+esc(p.renew)+'</span></div>':'')+
+        au+nx+
       '</div>'+
-      '<div class="pv-cta"><button class="buy-btn" id="pvBuy">'+esc(p.cta||"Вступить")+' · '+esc(p.price)+(p.per?"/мес":"")+'</button>'+(p.start?'<div class="pv-cta-note">Старт '+esc(p.start)+'</div>':'')+'</div>';
+      '<div class="pv-cta"><button class="buy-btn" id="pvBuy">'+esc(p.cta||"Вступить")+' · '+esc(p.price)+(p.per?"/мес":"")+'</button>'+(p.ctaNote||p.start?'<div class="pv-cta-note">'+esc(p.ctaNote||("Старт "+p.start))+'</div>':'')+'</div>';
+    var pc=document.getElementById("pvChan");
+    if(pc) pc.addEventListener("click", function(e){ e.preventDefault(); haptic("impact-light"); var u=p.author.link; try{ if(tg && tg.openTelegramLink) tg.openTelegramLink(u); else window.open(u,"_blank"); }catch(x){ window.open(u,"_blank"); } });
+    var pn=document.getElementById("pvNext");
+    if(pn) pn.addEventListener("click", function(){ haptic("selection"); state.learnTab="courses"; renderLearning(); setScroll(0); });
     var rail=document.getElementById("pvRail");
     if(rail){
       var dots=document.getElementById("pvDots").children;
@@ -5145,7 +5177,7 @@
       }, {passive:true});
       rail.addEventListener("click", function(e){ var im=e.target.closest("img"); if(im) openLightbox(im.getAttribute("src")); });
     }
-    document.getElementById("pvBuy").addEventListener("click", function(){ haptic("success"); toast(p.start ? "Приём участников откроется "+p.start : "Оплата появится после запуска"); });
+    document.getElementById("pvBuy").addEventListener("click", function(){ haptic("success"); toast("Оплата в приложении скоро появится"); });
   }
   function openProduct(id){
     var p=PRODUCTS.find(function(x){ return x.id===id; }); if(!p) return;
