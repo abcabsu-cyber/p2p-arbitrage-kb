@@ -625,6 +625,17 @@
   .pv-next b{font:700 16px 'Inter',sans-serif;color:var(--fg);}
   .pv-next p{margin:4px 0 8px;font:400 14px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
   .pv-next button{background:none;border:0;padding:0;font:600 14px 'Inter',sans-serif;color:color-mix(in srgb,#b36b00 80%,var(--fg));cursor:pointer;}
+
+  /* export mode for Figma import (?figma=<screen>): full-height flowing page, no overlays */
+  .figma .onb,.figma .toast,.figma .read-bar{display:none!important;}
+  .figma,.figma body{height:auto;}
+  .figma body{display:block;}
+  .figma .app{min-height:0;margin:0 auto;}
+  .figma .app-body{overflow:visible;flex:none;padding-bottom:16px;}
+  .figma .search-wrap{position:static;}
+  .figma .tabbar{position:relative;left:auto;right:auto;bottom:auto;margin:0 16px 16px;}
+  .figma .pv{padding-bottom:16px;}
+  .figma .pv-cta{position:static;transform:none;width:auto;margin:16px -16px 0;padding:12px 16px 14px;}
   .pv-cta .buy-btn{margin:0;}
   .pv-steps{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
   .pv-step{padding:16px;background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
@@ -1055,7 +1066,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 10.10 gate40</div>
+        <div class="pf-build" id="pfBuild">сборка 10.10 gate41</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -5457,7 +5468,17 @@
       haptic(seq[i++]);
     }, 85);
   }
+  var FIG=null; try{ FIG=new URLSearchParams(location.search).get("figma"); }catch(e){}
+  if(FIG) document.documentElement.classList.add("figma");
+  function figmaRoute(){
+    if(!FIG) return;
+    if(FIG==="learning"||FIG==="privat"){ switchTab("learning"); }
+    else if(FIG==="courses"){ state.learnTab="courses"; switchTab("learning"); renderLearning(); }
+    else if(FIG==="favorites"||FIG==="profile"){ switchTab(FIG); }
+    else if(SECTIONS.some(function(x){ return x.id===FIG; })){ state.tab="list"; openDetail(FIG); }
+  }
   function bootPrefs(){
+    if(FIG){ splashState.prefs=true; splashState.sub=true; splashState.minDone=true; return; }
     var local = loadPrefsLocal();
     syncNotifyRow();
     if(local && prefs.onboarded){ splashState.prefs = true; runLaunchCheck(); return; }
@@ -5509,7 +5530,7 @@
       }));
     }).then(function(){
       renderChips(); renderList(); renderFavorites(); renderLearning();
-      openFromStartParam();
+      openFromStartParam(); figmaRoute();
       splashState.content = true; revealApp();
     }).catch(function(){
       splashState.content = true; revealApp();
