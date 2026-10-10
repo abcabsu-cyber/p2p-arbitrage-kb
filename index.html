@@ -589,8 +589,26 @@
   .pv-sec h3{font:700 23px/1.2 'Inter',sans-serif;letter-spacing:-.02em;margin:8px 0 0;color:var(--fg);}
   .pv-ck{flex:none;width:26px;height:26px;border-radius:50%;background:linear-gradient(145deg,#ffe9a8,#f2bf3e);color:#4a3200;display:flex;align-items:center;justify-content:center;margin-top:1px;}
   .pv-ck svg{width:14px;height:14px;}
-  .pv-cta{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:20;margin-top:16px;padding:10px 12px 8px;border-radius:var(--radius-lg);background:color-mix(in srgb,var(--canvas) 86%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 8px 24px rgba(0,0,0,.12),inset 0 0 0 1px var(--separator);}
+  .pv{padding-bottom:150px;}
+  .pv-cta{position:fixed;left:50%;transform:translateX(-50%);width:min(calc(100% - 32px),560px);bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:20;padding:10px 12px 8px;border-radius:var(--radius-lg);background:color-mix(in srgb,var(--canvas) 86%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 8px 24px rgba(0,0,0,.12),inset 0 0 0 1px var(--separator);}
   .pv-cta .buy-btn{margin:0;}
+  .pv-steps{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
+  .pv-step{padding:16px;background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
+  .pv-step-hd{display:flex;align-items:center;gap:12px;}
+  .pv-step-hd i{flex:none;width:28px;height:28px;border-radius:50%;background:var(--fill);color:var(--fg-secondary);font:600 13px 'Inter',sans-serif;font-style:normal;display:flex;align-items:center;justify-content:center;}
+  .pv-step-hd b{flex:1;font:700 17px/1.25 'Inter',sans-serif;color:var(--fg);}
+  .pv-step-hd em{font:400 13px 'Inter',sans-serif;font-style:normal;color:var(--fg-tertiary);white-space:nowrap;}
+  .pv-step p{margin:10px 0 0;font:400 15px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
+  .pv-take{padding:14px 16px;border-radius:var(--radius-md);background:color-mix(in srgb,#f5a524 14%,var(--canvas));box-shadow:inset 0 0 0 1px color-mix(in srgb,#f5a524 30%,transparent);font:500 14px/1.5 'Inter',sans-serif;color:var(--fg);}
+  .pv-guar{margin-top:26px;padding:20px;border-radius:var(--radius-lg);background:var(--elevated);box-shadow:var(--shadow-card),inset 0 0 0 1px color-mix(in srgb,#f6c445 55%,transparent);}
+  .pv-guar span{font:600 11px 'Inter',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-tertiary);}
+  .pv-guar h3{font:700 22px/1.2 'Inter',sans-serif;letter-spacing:-.02em;margin:8px 0 8px;color:var(--fg);}
+  .pv-guar p{margin:0;font:400 15px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
+  .pv-faq{margin-top:14px;padding:4px 16px;background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
+  .pv-q{padding:14px 0;display:flex;flex-direction:column;gap:5px;}
+  .pv-q + .pv-q{border-top:1px solid var(--separator);}
+  .pv-q b{font:600 16px/1.35 'Inter',sans-serif;color:var(--fg);}
+  .pv-q span{font:400 14px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
   .pv-cta-note{text-align:center;font:400 12px 'Inter',sans-serif;color:var(--fg-tertiary);margin-top:7px;}
   .pv-lead{margin:16px 2px 6px;font:400 15px/1.55 'Inter',sans-serif;color:var(--fg-secondary);}
   .pv-list{display:flex;flex-direction:column;margin-top:14px;padding:6px 16px;background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
@@ -1003,7 +1021,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 10.10 gate34</div>
+        <div class="pf-build" id="pfBuild">сборка 10.10 gate35</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -5093,14 +5111,26 @@
     var rows = (p.include||[]).map(function(b){
       return '<div class="pv-row"><span class="pv-ck">'+CHK+'</span><span class="pv-tx"><b>'+esc(b.t)+'</b>'+(b.d?'<small>'+esc(b.d)+'</small>':'')+'</span></div>';
     }).join("");
+    function sec(o){ return '<div class="pv-sec"><span>'+esc(o.eyebrow)+'</span><h3>'+esc(o.title)+'</h3></div>'; }
+    function checkRows(arr){ return '<div class="pv-list">'+arr.map(function(b){ return '<div class="pv-row"><span class="pv-ck">'+CHK+'</span><span class="pv-tx"><b>'+esc(b.t)+'</b>'+(b.d?'<small>'+esc(b.d)+'</small>':'')+'</span></div>'; }).join("")+'</div>'; }
+    var month = p.month ? sec(p.month)+'<div class="pv-steps">'+p.month.steps.map(function(s,i){
+        return '<div class="pv-step"><div class="pv-step-hd"><i>'+(i+1)+'</i><b>'+esc(s.t)+'</b><em>'+esc(s.m)+'</em></div><p>'+esc(s.d)+'</p></div>';
+      }).join("")+(p.month.takeaway?'<div class="pv-take">'+esc(p.month.takeaway)+'</div>':'')+'</div>' : '';
+    var faq = p.faq ? sec(p.faq)+'<div class="pv-faq">'+p.faq.items.map(function(q){ return '<div class="pv-q"><b>'+esc(q.q)+'</b><span>'+esc(q.a)+'</span></div>'; }).join("")+'</div>' : '';
+    var guar = p.guarantee ? '<div class="pv-guar"><span>'+esc(p.guarantee.eyebrow)+'</span><h3>'+esc(p.guarantee.title)+'</h3><p>'+esc(p.guarantee.text)+'</p></div>' : '';
     box.innerHTML =
       '<div class="pv">'+
         '<div class="pv-hero"><span class="pv-tag">'+esc(p.eyebrow)+'</span><h2>'+esc(p.headline||p.title)+'</h2><p>'+esc(p.lead||p.sub)+'</p></div>'+
         '<div class="pv-sec"><span>Что входит</span><h3>'+esc(p.includeTitle||"Что вы получаете")+'</h3></div>'+
-        '<div class="pv-list">'+rows+'</div>'+
+        checkRows(p.include||[])+
+        month+
+        (p.gifts ? sec(p.gifts)+checkRows(p.gifts.items) : '')+
         (p.reviews&&p.reviews.length ? '<div class="pv-rev"><div class="pv-rev-hd"><span>'+esc(p.reviews_title||"Отзывы")+'</span><h3>'+esc(p.reviews_sub||"")+'</h3></div>'+
           '<div class="pv-rail" id="pvRail">'+p.reviews.map(function(src){ return '<figure class="pv-card"><img src="'+esc(src)+'" alt="Отзыв участника" loading="lazy" decoding="async"></figure>'; }).join("")+'</div>'+
           '<div class="pv-dots" id="pvDots">'+p.reviews.map(function(_,i){ return '<i'+(i===0?' class="on"':'')+'></i>'; }).join("")+'</div></div>' : '')+
+        guar+
+        (p.audience ? sec(p.audience)+checkRows(p.audience.items) : '')+
+        faq+
         (p.renew?'<div class="pv-renew"><b>Как продлевается</b><span>'+esc(p.renew)+'</span></div>':'')+
       '</div>'+
       '<div class="pv-cta"><button class="buy-btn" id="pvBuy">'+esc(p.cta||"Вступить")+' · '+esc(p.price)+(p.per?"/мес":"")+'</button>'+(p.start?'<div class="pv-cta-note">Старт '+esc(p.start)+'</div>':'')+'</div>';
