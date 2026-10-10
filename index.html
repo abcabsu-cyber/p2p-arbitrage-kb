@@ -578,16 +578,24 @@
   .prod-more{font:500 14px 'Inter',sans-serif;color:var(--fg);background:var(--fill);border:none;border-radius:var(--radius-pill);padding:8px 16px;}
   .pv-hero{position:relative;overflow:hidden;border-radius:var(--radius-lg);padding:22px 20px 18px;color:#fff;background:radial-gradient(120% 90% at 100% 0%,rgba(246,196,69,.38),transparent 55%),linear-gradient(160deg,#1b1b1f,#0c0c0d);box-shadow:0 14px 34px rgba(0,0,0,.22),inset 0 0 0 1px rgba(255,255,255,.08);}
   .pv-tag{display:inline-block;font:600 11px 'Inter',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6);}
-  .pv-hero h2{font:700 38px/1.05 'Inter',sans-serif;letter-spacing:-.03em;margin:10px 0 8px;background:linear-gradient(135deg,#fff3c4,#f6c445 60%,#d9a21b);-webkit-background-clip:text;background-clip:text;color:transparent;}
-  .pv-hero p{font:400 15px/1.45 'Inter',sans-serif;color:rgba(255,255,255,.72);margin:0 0 18px;}
+  .pv-hero h2{font:700 27px/1.15 'Inter',sans-serif;letter-spacing:-.025em;margin:12px 0 12px;background:linear-gradient(135deg,#fff3c4,#f6c445 60%,#d9a21b);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .pv-hero p{font:400 15px/1.5 'Inter',sans-serif;color:rgba(255,255,255,.72);margin:0;}
   .pv-pricebar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);}
   .pv-price b{font:700 26px 'Inter',sans-serif;letter-spacing:-.02em;}
   .pv-price small{font:400 14px 'Inter',sans-serif;color:rgba(255,255,255,.6);margin-left:5px;}
   .pv-start{font:600 12px 'Inter',sans-serif;color:#1c1c1e;background:#f6c445;border-radius:999px;padding:6px 11px;white-space:nowrap;}
-  .pv .outline-title{margin-top:24px;}
+  .pv-sec{margin:28px 2px 0;}
+  .pv-sec span{font:600 11px 'Inter',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-tertiary);}
+  .pv-sec h3{font:700 23px/1.2 'Inter',sans-serif;letter-spacing:-.02em;margin:8px 0 0;color:var(--fg);}
+  .pv-ck{flex:none;width:26px;height:26px;border-radius:50%;background:linear-gradient(145deg,#ffe9a8,#f2bf3e);color:#4a3200;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+  .pv-ck svg{width:14px;height:14px;}
+  .pv-cta{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:20;margin-top:16px;padding:10px 12px 8px;border-radius:var(--radius-lg);background:color-mix(in srgb,var(--canvas) 86%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 8px 24px rgba(0,0,0,.12),inset 0 0 0 1px var(--separator);}
+  .pv-cta .buy-btn{margin:0;}
+  .pv-cta-note{text-align:center;font:400 12px 'Inter',sans-serif;color:var(--fg-tertiary);margin-top:7px;}
   .pv-lead{margin:16px 2px 6px;font:400 15px/1.55 'Inter',sans-serif;color:var(--fg-secondary);}
-  .pv-list{display:flex;flex-direction:column;gap:10px;margin-top:10px;}
-  .pv-row{display:flex;gap:14px;align-items:flex-start;padding:14px;background:var(--elevated);border-radius:var(--radius-md);box-shadow:var(--shadow-card);}
+  .pv-list{display:flex;flex-direction:column;margin-top:14px;padding:6px 16px;background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
+  .pv-row{display:flex;gap:14px;align-items:flex-start;padding:13px 0;}
+  .pv-row + .pv-row{border-top:1px solid var(--separator);}
   .pv-ic{flex:none;width:40px;height:40px;border-radius:12px;background:linear-gradient(145deg,#ffe9a8,#f2bf3e);color:#4a3200;display:flex;align-items:center;justify-content:center;}
   .pv-ic svg{width:21px;height:21px;}
   .pv-tx{min-width:0;display:flex;flex-direction:column;gap:3px;}
@@ -607,7 +615,6 @@
   .pv-renew{margin-top:14px;padding:14px 16px;border-radius:var(--radius-md);background:color-mix(in srgb,#f5a524 14%,var(--canvas));display:flex;flex-direction:column;gap:4px;box-shadow:inset 0 0 0 1px color-mix(in srgb,#f5a524 30%,transparent);}
   .pv-renew b{font:700 13px 'Inter',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:color-mix(in srgb,#b36b00 80%,var(--fg));}
   .pv-renew span{font:400 14px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
-  .pv-buy{margin-bottom:var(--sp-4);}
   .buy-btn{display:block;width:100%;height:50px;border:none;border-radius:var(--radius-pill);background:var(--accent);color:var(--on-accent);font:600 16px 'Inter',sans-serif;cursor:pointer;margin:var(--sp-4) 0 0;transition:transform .12s ease;}
   .buy-btn:active{transform:scale(.97);}
   .price-card{margin-top:var(--sp-4);padding:var(--sp-4);background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
@@ -996,7 +1003,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 10.10 gate33</div>
+        <div class="pf-build" id="pfBuild">сборка 10.10 gate34</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -5082,22 +5089,21 @@
   function renderPrivate(box){
     var p = PRODUCTS.find(function(x){ return x.kind==="community"; });
     if(!p){ box.innerHTML=""; return; }
-    var rows = (p.blocks||[]).map(function(b){
-      return '<div class="pv-row"><span class="pv-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(PV_ICO[b.icon]||PV_ICO.bolt)+'</svg></span><span class="pv-tx"><b>'+esc(b.title)+'</b><small>'+esc(b.desc)+'</small></span></div>';
+    var CHK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    var rows = (p.include||[]).map(function(b){
+      return '<div class="pv-row"><span class="pv-ck">'+CHK+'</span><span class="pv-tx"><b>'+esc(b.t)+'</b>'+(b.d?'<small>'+esc(b.d)+'</small>':'')+'</span></div>';
     }).join("");
     box.innerHTML =
       '<div class="pv">'+
-        '<div class="pv-hero"><span class="pv-tag">'+esc(p.eyebrow)+'</span><h2>'+esc(p.title)+'</h2><p>'+esc(p.sub)+'</p>'+
-        '<div class="pv-pricebar"><div class="pv-price"><b>'+esc(p.price)+'</b><small>'+esc(p.per||"")+'</small></div>'+(p.start?'<span class="pv-start">Старт '+esc(p.start)+'</span>':'')+'</div></div>'+
-        '<div class="pv-lead">'+esc(p.desc)+'</div>'+
-        '<div class="outline-title">Что внутри</div>'+
+        '<div class="pv-hero"><span class="pv-tag">'+esc(p.eyebrow)+'</span><h2>'+esc(p.headline||p.title)+'</h2><p>'+esc(p.lead||p.sub)+'</p></div>'+
+        '<div class="pv-sec"><span>Что входит</span><h3>'+esc(p.includeTitle||"Что вы получаете")+'</h3></div>'+
         '<div class="pv-list">'+rows+'</div>'+
         (p.reviews&&p.reviews.length ? '<div class="pv-rev"><div class="pv-rev-hd"><span>'+esc(p.reviews_title||"Отзывы")+'</span><h3>'+esc(p.reviews_sub||"")+'</h3></div>'+
           '<div class="pv-rail" id="pvRail">'+p.reviews.map(function(src){ return '<figure class="pv-card"><img src="'+esc(src)+'" alt="Отзыв участника" loading="lazy" decoding="async"></figure>'; }).join("")+'</div>'+
           '<div class="pv-dots" id="pvDots">'+p.reviews.map(function(_,i){ return '<i'+(i===0?' class="on"':'')+'></i>'; }).join("")+'</div></div>' : '')+
         (p.renew?'<div class="pv-renew"><b>Как продлевается</b><span>'+esc(p.renew)+'</span></div>':'')+
-        '<button class="buy-btn pv-buy" id="pvBuy">Вступить в приват</button>'+
-      '</div>';
+      '</div>'+
+      '<div class="pv-cta"><button class="buy-btn" id="pvBuy">'+esc(p.cta||"Вступить")+' · '+esc(p.price)+(p.per?"/мес":"")+'</button>'+(p.start?'<div class="pv-cta-note">Старт '+esc(p.start)+'</div>':'')+'</div>';
     var rail=document.getElementById("pvRail");
     if(rail){
       var dots=document.getElementById("pvDots").children;
