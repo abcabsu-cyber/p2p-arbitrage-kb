@@ -589,7 +589,7 @@
   .pv-sec h3{font:700 23px/1.2 'Inter',sans-serif;letter-spacing:-.02em;margin:8px 0 0;color:var(--fg);}
   .pv-ck{flex:none;width:26px;height:26px;border-radius:50%;background:linear-gradient(145deg,#ffe9a8,#f2bf3e);color:#4a3200;display:flex;align-items:center;justify-content:center;margin-top:1px;}
   .pv-ck svg{width:14px;height:14px;}
-  .pv{padding-bottom:196px;}
+  .pv{padding-bottom:calc(var(--pvcta,180px) - 86px + 16px);}
   .pv-cta{position:fixed;left:50%;transform:translateX(-50%);width:min(100%,460px);bottom:0;z-index:5;padding:12px 16px calc(86px + env(safe-area-inset-bottom,0px));border-radius:22px 22px 0 0;background:var(--canvas);box-shadow:0 -10px 28px rgba(0,0,0,.10),0 -1px 0 var(--separator);}
   .tabbar{z-index:6;}
   .pv-plain{margin-top:12px;padding:2px 16px;background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
@@ -1055,7 +1055,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 10.10 gate38</div>
+        <div class="pf-build" id="pfBuild">сборка 10.10 gate39</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -5171,6 +5171,7 @@
         au+nx+
       '</div>'+
       '<div class="pv-cta"><button class="buy-btn" id="pvBuy">'+esc(p.cta||"Вступить")+' · '+esc(p.price)+(p.per?"/мес":"")+'</button>'+(p.ctaNote||p.start?'<div class="pv-cta-note">'+esc(p.ctaNote||("Старт "+p.start))+'</div>':'')+'</div>';
+    (function(){ var c=box.querySelector(".pv-cta"), pv=box.querySelector(".pv"); function m(){ if(c&&pv&&c.offsetHeight) pv.style.setProperty("--pvcta", c.offsetHeight+"px"); } m(); setTimeout(m,300); })();
     var pc=document.getElementById("pvChan");
     if(pc) pc.addEventListener("click", function(e){ e.preventDefault(); haptic("impact-light"); var u=p.author.link; try{ if(tg && tg.openTelegramLink) tg.openTelegramLink(u); else window.open(u,"_blank"); }catch(x){ window.open(u,"_blank"); } });
     var pn=document.getElementById("pvNext");
