@@ -592,6 +592,14 @@
   .pv{padding-bottom:196px;}
   .pv-cta{position:fixed;left:50%;transform:translateX(-50%);width:min(100%,460px);bottom:0;z-index:5;padding:12px 16px calc(86px + env(safe-area-inset-bottom,0px));border-radius:22px 22px 0 0;background:var(--canvas);box-shadow:0 -10px 28px rgba(0,0,0,.10),0 -1px 0 var(--separator);}
   .tabbar{z-index:6;}
+  .pv-plain{margin-top:12px;padding:2px 16px;background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
+  .pv-pl{padding:12px 0;}
+  .pv-pl + .pv-pl{border-top:1px solid var(--separator);}
+  .pv-pl-hd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .pv-pl-hd b{font:600 15px/1.3 'Inter',sans-serif;color:var(--fg);}
+  .pv-pl-hd em{font:400 13px 'Inter',sans-serif;font-style:normal;color:var(--fg-tertiary);white-space:nowrap;}
+  .pv-pl p{margin:3px 0 0;font:400 14px/1.45 'Inter',sans-serif;color:var(--fg-secondary);}
+  .pv-note{margin:10px 4px 0;font:400 13px/1.5 'Inter',sans-serif;color:var(--fg-tertiary);}
   .pv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
   .pv-stats div{padding:14px 8px;text-align:center;background:var(--elevated);border-radius:var(--radius-md);box-shadow:var(--shadow-card);}
   .pv-stats b{display:block;font:700 22px 'Inter',sans-serif;letter-spacing:-.02em;background:linear-gradient(135deg,#f6c445,#d9a21b);-webkit-background-clip:text;background-clip:text;color:transparent;}
@@ -1044,7 +1052,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 10.10 gate36</div>
+        <div class="pf-build" id="pfBuild">сборка 10.10 gate37</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -5140,9 +5148,8 @@
     var au = p.author ? '<div class="pv-sec"><span>'+esc(p.author.eyebrow)+'</span></div><div class="pv-auth"><div class="pv-auth-hd"><i>'+esc(p.author.initials)+'</i><b>'+esc(p.author.name)+'</b></div><p>'+esc(p.author.text)+'</p>'+
       (p.author.link?'<a class="pv-chan" id="pvChan" href="'+esc(p.author.link)+'"><span><b>'+esc(p.author.linkTitle)+'</b><small>'+esc(p.author.linkSub)+'</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>':'')+'</div>' : '';
     var nx = p.next ? '<div class="pv-next"><div class="pv-next-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></div><div><b>'+esc(p.next.title)+'</b><p>'+esc(p.next.text)+'</p><button id="pvNext">'+esc(p.next.btn)+' →</button></div></div>' : '';
-    var month = p.month ? sec(p.month)+'<div class="pv-steps">'+p.month.steps.map(function(s,i){
-        return '<div class="pv-step"><div class="pv-step-hd"><i>'+(i+1)+'</i><b>'+esc(s.t)+'</b><em>'+esc(s.m)+'</em></div><p>'+esc(s.d)+'</p></div>';
-      }).join("")+(p.month.takeaway?'<div class="pv-take">'+esc(p.month.takeaway)+'</div>':'')+'</div>' : '';
+    function plain(arr){ return '<div class="pv-plain">'+arr.map(function(b){ return '<div class="pv-pl"><div class="pv-pl-hd"><b>'+esc(b.t)+'</b>'+(b.m?'<em>'+esc(b.m)+'</em>':'')+'</div><p>'+esc(b.d)+'</p></div>'; }).join("")+'</div>'; }
+    var month = p.month ? sec(p.month)+plain(p.month.steps)+(p.month.takeaway?'<p class="pv-note">'+esc(p.month.takeaway)+'</p>':'') : '';
     var faq = p.faq ? sec(p.faq)+'<div class="pv-faq">'+p.faq.items.map(function(q){ return '<div class="pv-q"><b>'+esc(q.q)+'</b><span>'+esc(q.a)+'</span></div>'; }).join("")+'</div>' : '';
     var guar = p.guarantee ? '<div class="pv-guar"><span>'+esc(p.guarantee.eyebrow)+'</span><h3>'+esc(p.guarantee.title)+'</h3><p>'+esc(p.guarantee.text)+'</p></div>' : '';
     box.innerHTML =
@@ -5156,7 +5163,7 @@
           '<div class="pv-rail" id="pvRail">'+p.reviews.map(function(src){ return '<figure class="pv-card"><img src="'+esc(src)+'" alt="Отзыв участника" loading="lazy" decoding="async"></figure>'; }).join("")+'</div>'+
           '<div class="pv-dots" id="pvDots">'+p.reviews.map(function(_,i){ return '<i'+(i===0?' class="on"':'')+'></i>'; }).join("")+'</div></div>' : '')+
         guar+
-        (p.audience ? sec(p.audience)+checkRows(p.audience.items) : '')+
+        (p.audience ? sec(p.audience)+plain(p.audience.items) : '')+
         faq+
         (p.renew?'<div class="pv-renew"><b>Как продлевается</b><span>'+esc(p.renew)+'</span></div>':'')+
         au+nx+
