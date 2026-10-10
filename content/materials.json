@@ -9,6 +9,10 @@
       "label": "Основы"
     },
     {
+      "id": "video",
+      "label": "Видеоуроки"
+    },
+    {
       "id": "orderbook",
       "label": "Работа в стакане"
     },
@@ -22,6 +26,15 @@
     }
   ],
   "sections": [
+    {
+      "id": "video-bundle",
+      "title": "Рабочая уникальная связка без карт со спредом 5%",
+      "category": "video",
+      "icon": "i-swap",
+      "desc": "Полный видеоурок по связке.",
+      "body": "content/articles/video-bundle.md",
+      "cover": "content/images/video-bundle-cover.jpg"
+    },
     {
       "id": "examples",
       "title": "Рабочие примеры анализа стакана",
