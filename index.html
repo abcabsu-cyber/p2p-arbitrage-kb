@@ -576,6 +576,27 @@
   .prod-price{font:700 17px 'Inter',sans-serif;color:var(--fg);}
   .prod-price small{font:400 13px 'Inter',sans-serif;color:var(--fg-secondary);margin-left:2px;}
   .prod-more{font:500 14px 'Inter',sans-serif;color:var(--fg);background:var(--fill);border:none;border-radius:var(--radius-pill);padding:8px 16px;}
+  .pv-hero{position:relative;overflow:hidden;border-radius:var(--radius-lg);padding:22px 20px 18px;color:#fff;background:radial-gradient(120% 90% at 100% 0%,rgba(246,196,69,.38),transparent 55%),linear-gradient(160deg,#1b1b1f,#0c0c0d);box-shadow:0 14px 34px rgba(0,0,0,.22),inset 0 0 0 1px rgba(255,255,255,.08);}
+  .pv-tag{display:inline-block;font:600 11px 'Inter',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6);}
+  .pv-hero h2{font:700 38px/1.05 'Inter',sans-serif;letter-spacing:-.03em;margin:10px 0 8px;background:linear-gradient(135deg,#fff3c4,#f6c445 60%,#d9a21b);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .pv-hero p{font:400 15px/1.45 'Inter',sans-serif;color:rgba(255,255,255,.72);margin:0 0 18px;}
+  .pv-pricebar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);}
+  .pv-price b{font:700 26px 'Inter',sans-serif;letter-spacing:-.02em;}
+  .pv-price small{font:400 14px 'Inter',sans-serif;color:rgba(255,255,255,.6);margin-left:5px;}
+  .pv-start{font:600 12px 'Inter',sans-serif;color:#1c1c1e;background:#f6c445;border-radius:999px;padding:6px 11px;white-space:nowrap;}
+  .pv .outline-title{margin-top:24px;}
+  .pv-lead{margin:16px 2px 6px;font:400 15px/1.55 'Inter',sans-serif;color:var(--fg-secondary);}
+  .pv-list{display:flex;flex-direction:column;gap:10px;margin-top:10px;}
+  .pv-row{display:flex;gap:14px;align-items:flex-start;padding:14px;background:var(--elevated);border-radius:var(--radius-md);box-shadow:var(--shadow-card);}
+  .pv-ic{flex:none;width:40px;height:40px;border-radius:12px;background:linear-gradient(145deg,#ffe9a8,#f2bf3e);color:#4a3200;display:flex;align-items:center;justify-content:center;}
+  .pv-ic svg{width:21px;height:21px;}
+  .pv-tx{min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .pv-tx b{font:600 16px/1.3 'Inter',sans-serif;color:var(--fg);}
+  .pv-tx small{font:400 14px/1.45 'Inter',sans-serif;color:var(--fg-secondary);}
+  .pv-renew{margin-top:14px;padding:14px 16px;border-radius:var(--radius-md);background:color-mix(in srgb,#f5a524 14%,var(--canvas));display:flex;flex-direction:column;gap:4px;box-shadow:inset 0 0 0 1px color-mix(in srgb,#f5a524 30%,transparent);}
+  .pv-renew b{font:700 13px 'Inter',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:color-mix(in srgb,#b36b00 80%,var(--fg));}
+  .pv-renew span{font:400 14px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
+  .pv-buy{margin-bottom:var(--sp-4);}
   .buy-btn{display:block;width:100%;height:50px;border:none;border-radius:var(--radius-pill);background:var(--accent);color:var(--on-accent);font:600 16px 'Inter',sans-serif;cursor:pointer;margin:var(--sp-4) 0 0;transition:transform .12s ease;}
   .buy-btn:active{transform:scale(.97);}
   .price-card{margin-top:var(--sp-4);padding:var(--sp-4);background:var(--elevated);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
@@ -895,7 +916,7 @@
     <!-- LEARNING -->
     <section class="view" id="view-learning">
       <div class="pseg" id="learnSeg"><div class="pseg-ind"></div>
-        <button class="pseg-btn active" data-lt="community">Сообщество</button>
+        <button class="pseg-btn active" data-lt="community">Приват</button>
         <button class="pseg-btn" data-lt="courses">Обучение</button>
       </div>
       <div class="prod-list" id="prodList"></div>
@@ -964,7 +985,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 10.10 gate30</div>
+        <div class="pf-build" id="pfBuild">сборка 10.10 gate31</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -5028,6 +5049,7 @@
     seg.querySelector(".pseg-ind").style.transform = "translateX("+(kind==="course"?100:0)+"%)";
     Array.prototype.forEach.call(seg.querySelectorAll(".pseg-btn"), function(b){ b.classList.toggle("active", b.getAttribute("data-lt")===state.learnTab); });
     var box=document.getElementById("prodList");
+    if(kind==="community"){ renderPrivate(box); return; }
     box.innerHTML = PRODUCTS.filter(function(p){ return p.kind===kind; }).map(function(p){
       return '<article class="prod" data-pid="'+p.id+'">'+
         '<div class="prod-cover '+p.cover+'"><div class="prod-eyebrow">'+p.eyebrow+'</div><div class="prod-cover-title">'+p.title+'</div></div>'+
@@ -5038,6 +5060,31 @@
     Array.prototype.forEach.call(box.querySelectorAll(".prod"), function(el){
       el.addEventListener("click", function(){ openProduct(el.getAttribute("data-pid")); });
     });
+  }
+  var PV_ICO = {
+    lock:'<rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    book:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>',
+    bolt:'<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>',
+    chat:'<path d="M4 5h16v11H9l-5 4z"/>',
+    video:'<rect x="3" y="6" width="13" height="12" rx="3"/><path d="M16 10.5l5-3v9l-5-3"/>'
+  };
+  function renderPrivate(box){
+    var p = PRODUCTS.find(function(x){ return x.kind==="community"; });
+    if(!p){ box.innerHTML=""; return; }
+    var rows = (p.blocks||[]).map(function(b){
+      return '<div class="pv-row"><span class="pv-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(PV_ICO[b.icon]||PV_ICO.bolt)+'</svg></span><span class="pv-tx"><b>'+esc(b.title)+'</b><small>'+esc(b.desc)+'</small></span></div>';
+    }).join("");
+    box.innerHTML =
+      '<div class="pv">'+
+        '<div class="pv-hero"><span class="pv-tag">'+esc(p.eyebrow)+'</span><h2>'+esc(p.title)+'</h2><p>'+esc(p.sub)+'</p>'+
+        '<div class="pv-pricebar"><div class="pv-price"><b>'+esc(p.price)+'</b><small>'+esc(p.per||"")+'</small></div>'+(p.start?'<span class="pv-start">Старт '+esc(p.start)+'</span>':'')+'</div></div>'+
+        '<div class="pv-lead">'+esc(p.desc)+'</div>'+
+        '<div class="outline-title">Что внутри</div>'+
+        '<div class="pv-list">'+rows+'</div>'+
+        (p.renew?'<div class="pv-renew"><b>Как продлевается</b><span>'+esc(p.renew)+'</span></div>':'')+
+        '<button class="buy-btn pv-buy" id="pvBuy">Вступить в приват</button>'+
+      '</div>';
+    document.getElementById("pvBuy").addEventListener("click", function(){ haptic("success"); toast(p.start ? "Приём участников откроется "+p.start : "Оплата появится после запуска"); });
   }
   function openProduct(id){
     var p=PRODUCTS.find(function(x){ return x.id===id; }); if(!p) return;
