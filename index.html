@@ -722,6 +722,11 @@
   .callout.c-bonus .callout-ic svg{width:12px;height:12px;}
   .callout.c-bonus .callout-title{font-size:11px;margin:2px 0 2px;color:#7a5200;}
   .callout.c-bonus .callout-body p{font-size:13px;line-height:1.45;color:#5c4308;}
+  .callout.c-step{padding:16px 16px 16px 14px;}
+  .callout.c-step .callout-ic{background:none;color:#f5a524;width:28px;height:28px;margin-top:0;}
+  .callout.c-step .callout-ic svg{width:24px;height:24px;}
+  .callout.c-step .callout-title{font:700 17px/1.3 'Inter',sans-serif;letter-spacing:0;text-transform:none;color:var(--fg);margin:2px 0 6px;}
+  .callout.c-step .callout-body p{font-size:15px;color:var(--fg-secondary);}
   .callout.c-note .callout-ic{background:color-mix(in srgb,var(--fg) 14%,transparent);color:var(--fg-secondary);}
   .callout.c-note .callout-title,.callout.c-note p{color:var(--fg-secondary);}
   .md hr{border:none;height:1px;background:var(--separator);margin:24px 0;}
@@ -959,7 +964,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 10.10 gate29</div>
+        <div class="pf-build" id="pfBuild">сборка 10.10 gate30</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -4667,10 +4672,12 @@
     "неактуально": {cls:"c-old", title:"Неактуально", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>'},
     "бонус": {cls:"c-bonus", title:"Бонус", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/></svg>'},
     "примечание": {cls:"c-old", title:"Примечание", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>'},
+    "шаг": {cls:"c-step", title:"Следующий шаг после урока", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>'},
     "заметка": {cls:"c-note", title:"Примечание", svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 11v6"/><path d="M12 7v.1"/></svg>'}
   };
   function ico(p, w){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(w||1.8)+'" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'; }
   var ICO = {
+    graduation: ico('<path d="M2 9l10-5 10 5-10 5-10-5Z"/><path d="M6 11.5V17c0 1.4 2.7 3 6 3s6-1.6 6-3v-5.5"/><path d="M22 9v6.5"/>'),
     bolt: ico('<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>'),
     list: ico('<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke-width="2.6"/>'),
     telegram: ico('<path d="M21.5 3.5L2.8 10.7l6.2 2.4 2.4 6.2z"/><path d="M9 13.1l12.5-9.6"/>'),
@@ -4746,7 +4753,7 @@
       if(/^!\[[^\]]*\]\([^)]+\)\s*$/.test(l)){ out.push(mdInline(l)); i++; continue; }
       if(/^>\s?/.test(l)){
         var q=[]; while(i<lines.length && /^>\s?/.test(lines[i])){ q.push(lines[i].replace(/^>\s?/,"")); i++; }
-        var cm=q[0].match(/^\[!(важно|внимание|заметка|неактуально|бонус|примечание)\]\s*(.*)$/i);
+        var cm=q[0].match(/^\[!(важно|внимание|заметка|неактуально|бонус|примечание|шаг)\]\s*(.*)$/i);
         if(cm){
           var kind=cm[1].toLowerCase(), meta=CALLOUTS[kind], paras=[], cur=[];
           if(cm[2]) cur.push(cm[2]);
@@ -4839,7 +4846,7 @@
         try{ if(/^https:\/\/t\.me\//.test(hu) && tg && tg.openTelegramLink){ tg.openTelegramLink(hu); okOpen=true; } else if(tg && tg.openLink){ tg.openLink(hu); okOpen=true; } }catch(x){}
         if(okOpen) e.preventDefault();   // otherwise the real link (target=_blank) still works
       }
-      else if(t.hasAttribute("data-app")){ openDetail(t.getAttribute("data-app")); }
+      else if(t.hasAttribute("data-app")){ var da=t.getAttribute("data-app"); if(da.indexOf("tab:")===0) switchTab(da.slice(4)); else openDetail(da); }
       else if(t.hasAttribute("data-share")){ var cs=SECTIONS.find(function(x){ return x.id===state.selectedId; }); if(cs) shareSection(cs); }
       else if(t.hasAttribute("data-vrow")){ t.classList.toggle("on"); haptic("selection"); }
       else if(t.hasAttribute("data-vgo")){
@@ -4952,7 +4959,7 @@
         '<div class="detail-head"><button class="btn-icon" id="backBtn"><svg viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg></button><div style="flex:1"></div>'+
         '<button class="btn-icon" id="shareBtn">'+SHARE_SVG+'</button>'+
         '<button class="btn-icon star-btn'+(isFav?' active':'')+'" id="starBtn"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></button></div>'+
-        (s.cover ? '<img class="art-cover" src="'+s.cover+'" alt="">' : '')+
+        (s.cover && !s.hideCover ? '<img class="art-cover" src="'+s.cover+'" alt="">' : '')+
         '<div class="art-row"><span class="badge '+s.category+'">'+CATEGORY_LABEL[s.category]+'</span></div>'+
         '<h1 class="art-title">'+s.title+'</h1>'+
         '<div class="art-meta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'+readMins(s._md)+' мин чтения</div>'+

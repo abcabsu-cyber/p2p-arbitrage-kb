@@ -33,7 +33,8 @@
       "icon": "i-swap",
       "desc": "Полный видеоурок по связке.",
       "body": "content/articles/video-bundle.md",
-      "cover": "content/images/video-bundle-cover.jpg"
+      "cover": "content/images/video-bundle-cover.jpg",
+      "hideCover": true
     },
     {
       "id": "examples",
