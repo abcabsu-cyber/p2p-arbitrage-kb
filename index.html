@@ -600,6 +600,9 @@
   .pv-pl-hd em{font:400 13px 'Inter',sans-serif;font-style:normal;color:var(--fg-tertiary);white-space:nowrap;}
   .pv-pl p{margin:3px 0 0;font:400 14px/1.45 'Inter',sans-serif;color:var(--fg-secondary);}
   .pv-note{margin:10px 4px 0;font:400 13px/1.5 'Inter',sans-serif;color:var(--fg-tertiary);}
+  .pv .lcard.pv-nx,button.lcard.pv-nx{margin:14px 0 0;}
+  .pv-nx .lic{background:color-mix(in srgb,#5b7cfa 16%,var(--canvas));color:#4a67e0;}
+  .pv-lead + .pv-plain{margin-top:10px;}
   .pv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
   .pv-stats div{padding:14px 8px;text-align:center;background:var(--elevated);border-radius:var(--radius-md);box-shadow:var(--shadow-card);}
   .pv-stats b{display:block;font:700 22px 'Inter',sans-serif;letter-spacing:-.02em;background:linear-gradient(135deg,#f6c445,#d9a21b);-webkit-background-clip:text;background-clip:text;color:transparent;}
@@ -631,7 +634,7 @@
   .pv-step-hd em{font:400 13px 'Inter',sans-serif;font-style:normal;color:var(--fg-tertiary);white-space:nowrap;}
   .pv-step p{margin:10px 0 0;font:400 15px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
   .pv-take{padding:14px 16px;border-radius:var(--radius-md);background:color-mix(in srgb,#f5a524 14%,var(--canvas));box-shadow:inset 0 0 0 1px color-mix(in srgb,#f5a524 30%,transparent);font:500 14px/1.5 'Inter',sans-serif;color:var(--fg);}
-  .pv-guar{margin-top:26px;padding:20px;border-radius:var(--radius-lg);background:var(--elevated);box-shadow:var(--shadow-card),inset 0 0 0 1px color-mix(in srgb,#f6c445 55%,transparent);}
+  .pv-guar{margin-top:26px;padding:18px 20px;border-radius:var(--radius-lg);background:color-mix(in srgb,#34a56f 10%,var(--elevated));box-shadow:inset 0 0 0 1px color-mix(in srgb,#34a56f 28%,transparent);}
   .pv-guar span{font:600 11px 'Inter',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-tertiary);}
   .pv-guar h3{font:700 22px/1.2 'Inter',sans-serif;letter-spacing:-.02em;margin:8px 0 8px;color:var(--fg);}
   .pv-guar p{margin:0;font:400 15px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
@@ -1052,7 +1055,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 10.10 gate37</div>
+        <div class="pf-build" id="pfBuild">сборка 10.10 gate38</div>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
       </div>
     </section>
@@ -5147,8 +5150,8 @@
     var stats = p.stats ? '<div class="pv-stats">'+p.stats.map(function(s){ return '<div><b>'+esc(s.n)+'</b><span>'+esc(s.l)+'</span></div>'; }).join("")+'</div>' : '';
     var au = p.author ? '<div class="pv-sec"><span>'+esc(p.author.eyebrow)+'</span></div><div class="pv-auth"><div class="pv-auth-hd"><i>'+esc(p.author.initials)+'</i><b>'+esc(p.author.name)+'</b></div><p>'+esc(p.author.text)+'</p>'+
       (p.author.link?'<a class="pv-chan" id="pvChan" href="'+esc(p.author.link)+'"><span><b>'+esc(p.author.linkTitle)+'</b><small>'+esc(p.author.linkSub)+'</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>':'')+'</div>' : '';
-    var nx = p.next ? '<div class="pv-next"><div class="pv-next-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></div><div><b>'+esc(p.next.title)+'</b><p>'+esc(p.next.text)+'</p><button id="pvNext">'+esc(p.next.btn)+' →</button></div></div>' : '';
-    function plain(arr){ return '<div class="pv-plain">'+arr.map(function(b){ return '<div class="pv-pl"><div class="pv-pl-hd"><b>'+esc(b.t)+'</b>'+(b.m?'<em>'+esc(b.m)+'</em>':'')+'</div><p>'+esc(b.d)+'</p></div>'; }).join("")+'</div>'; }
+    var nx = p.next ? '<div class="pv-sec"><span>'+esc(p.next.title)+'</span></div><button class="lcard pv-nx" id="pvNext"><span class="lic">'+ICO.graduation+'</span><span class="ltx"><b>'+esc(p.next.btn)+'</b><small>'+esc(p.next.text)+'</small></span><span class="larr">'+ICO.arrow+'</span></button>' : '';
+    function plain(arr){ return '<div class="pv-plain">'+arr.map(function(b){ return '<div class="pv-pl"><div class="pv-pl-hd"><b>'+esc(b.t)+'</b>'+(b.m?'<em>'+esc(b.m)+'</em>':'')+'</div>'+(b.d?'<p>'+esc(b.d)+'</p>':'')+'</div>'; }).join("")+'</div>'; }
     var month = p.month ? sec(p.month)+plain(p.month.steps)+(p.month.takeaway?'<p class="pv-note">'+esc(p.month.takeaway)+'</p>':'') : '';
     var faq = p.faq ? sec(p.faq)+'<div class="pv-faq">'+p.faq.items.map(function(q){ return '<div class="pv-q"><b>'+esc(q.q)+'</b><span>'+esc(q.a)+'</span></div>'; }).join("")+'</div>' : '';
     var guar = p.guarantee ? '<div class="pv-guar"><span>'+esc(p.guarantee.eyebrow)+'</span><h3>'+esc(p.guarantee.title)+'</h3><p>'+esc(p.guarantee.text)+'</p></div>' : '';
@@ -5158,14 +5161,13 @@
         '<div class="pv-sec"><span>Что входит</span><h3>'+esc(p.includeTitle||"Что вы получаете")+'</h3></div>'+
         checkRows(p.include||[])+
         month+
-        (p.gifts ? sec(p.gifts)+(p.gifts.sub?'<p class="pv-lead">'+esc(p.gifts.sub)+'</p>':'')+checkRows(p.gifts.items) : '')+
+        (p.gifts ? sec(p.gifts)+(p.gifts.sub?'<p class="pv-lead">'+esc(p.gifts.sub)+'</p>':'')+plain(p.gifts.items) : '')+
         (p.reviews&&p.reviews.length ? '<div class="pv-rev"><div class="pv-rev-hd"><span>'+esc(p.reviews_title||"Отзывы")+'</span><h3>'+esc(p.reviews_sub||"")+'</h3></div>'+
           '<div class="pv-rail" id="pvRail">'+p.reviews.map(function(src){ return '<figure class="pv-card"><img src="'+esc(src)+'" alt="Отзыв участника" loading="lazy" decoding="async"></figure>'; }).join("")+'</div>'+
           '<div class="pv-dots" id="pvDots">'+p.reviews.map(function(_,i){ return '<i'+(i===0?' class="on"':'')+'></i>'; }).join("")+'</div></div>' : '')+
         guar+
         (p.audience ? sec(p.audience)+plain(p.audience.items) : '')+
         faq+
-        (p.renew?'<div class="pv-renew"><b>Как продлевается</b><span>'+esc(p.renew)+'</span></div>':'')+
         au+nx+
       '</div>'+
       '<div class="pv-cta"><button class="buy-btn" id="pvBuy">'+esc(p.cta||"Вступить")+' · '+esc(p.price)+(p.per?"/мес":"")+'</button>'+(p.ctaNote||p.start?'<div class="pv-cta-note">'+esc(p.ctaNote||("Старт "+p.start))+'</div>':'')+'</div>';
