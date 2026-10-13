@@ -1,0 +1,5 @@
+# materials live in the private repo (p2p-content); local copy is for development only
+content/*
+!content/images/
+content/images/*
+!content/images/gate-banner.jpg
