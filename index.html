@@ -1271,7 +1271,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 14.10 design30</div>
+        <div class="pf-build" id="pfBuild">сборка 14.10 design31</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5281,7 +5281,7 @@
         (s.cover && !s.hideCover ? '<img class="art-cover" src="'+s.cover+'" alt="">' : '')+
         '<div class="art-row"><span class="badge '+s.category+'">'+CATEGORY_LABEL[s.category]+'</span></div>'+
         '<h1 class="art-title">'+s.title+'</h1>'+
-        '<div class="art-meta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'+readMins(s._md)+' мин чтения</div>'+
+        (s.hideReadTime ? '' : '<div class="art-meta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'+readMins(s._md)+' мин чтения</div>')+
         (s.leadBelow ? '' : '<p class="art-lead">'+s.desc+'</p>')+
         '<div class="md">'+(s.leadBelow ? mdRender(s._md).replace('</figure>','</figure><p class="art-lead-sm">'+s.desc+'</p>') : mdRender(s._md))+'</div>';
       wireArticle(view);
