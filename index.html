@@ -628,7 +628,8 @@
   .cs-thumbs div{aspect-ratio:16/10;border-radius:12px;background:var(--fill);}
   .cs-head{margin:22px 2px 0;}
   .cs-head span{font:600 11px 'Inter',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-tertiary);}
-  .cs-head h2{font:700 27px/1.15 'Inter',sans-serif;letter-spacing:-.025em;margin:10px 0 10px;color:var(--fg);}
+  .cs-head h2{font:700 min(27px,5.85vw)/1.15 'Inter',sans-serif;letter-spacing:-.025em;margin:0 0 10px;color:var(--fg);text-wrap:balance;}
+  .cs-head span + h2{margin-top:10px;}
   .cs-head p{margin:0;font:400 15px/1.5 'Inter',sans-serif;color:var(--fg-secondary);}
   .cs-ck{flex:none;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;justify-content:center;margin-top:1px;}
   .cs-ck svg{width:14px;height:14px;}
@@ -5505,7 +5506,7 @@
       '<div class="cs-dots" id="csDots">'+T.items.map(function(_,i){ return '<i'+(i===sel?' class="on"':'')+'></i>'; }).join("")+'</div>'+(T.hint?'<div class="cs-hint">'+esc(T.hint)+'</div>':'')+'</div>' : '';
     var G=c.guarantee, guar = G ? '<div class="cs-guar"><span>'+esc(G.eyebrow)+'</span><h3>'+esc(G.title)+'</h3><p>'+esc(G.text)+'</p></div>' : '';
     box.innerHTML = '<div class="pv cs">'+media+
-      '<div class="cs-head"><span>'+esc(c.eyebrow||"")+'</span><h2>'+esc(c.headline||c.title||"")+'</h2>'+(c.lead?'<p>'+esc(c.lead)+'</p>':'')+'</div>'+
+      '<div class="cs-head">'+(c.eyebrow?'<span>'+esc(c.eyebrow)+'</span>':'')+'<h2>'+esc(c.headline||c.title||"")+'</h2>'+(c.lead?'<p>'+esc(c.lead)+'</p>':'')+'</div>'+
       sec("Что входит", c.includeTitle||"Что входит")+inc+prog+rev+tar+guar+'</div>'+
       '<div class="pv-cta"><button class="buy-btn" id="csBuy"></button>'+(c.ctaNote?'<div class="pv-cta-note">'+esc(c.ctaNote)+'</div>':'')+'</div>';
     var buy=document.getElementById("csBuy");
