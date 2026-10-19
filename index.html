@@ -652,7 +652,7 @@
   .cs-tblock{min-height:calc(100dvh - var(--pvcta,180px) - 24px);display:flex;flex-direction:column;justify-content:center;}
   .cs-tars{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;margin:10px -16px 0;padding:4px calc((100vw - min(68vw,300px)) / 2) 6px;scrollbar-width:none;align-items:stretch;overscroll-behavior-x:contain;}
   .cs-tars::-webkit-scrollbar{display:none;}
-  .cs-tar{flex:none;width:min(68vw,300px);scroll-snap-align:center;padding:18px 18px 16px;border-radius:24px;background:var(--elevated);color:var(--fg);box-shadow:var(--shadow-card);transition:background-color .3s ease,color .3s ease;cursor:pointer;}
+  .cs-tar{flex:none;width:min(68vw,300px);scroll-snap-align:center;padding:18px 18px 16px;border-radius:24px;background:var(--elevated);color:var(--fg);box-shadow:var(--shadow-card);transition:background-color .18s ease-out,color .18s ease-out,box-shadow .18s ease-out;cursor:pointer;}
   .cs-tar.cur{background:var(--accent);color:var(--on-accent);box-shadow:var(--shadow-float);}
   .cs-tar-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px;}
   .cs-tar-hd b{font:600 20px/1.2 'Inter',sans-serif;letter-spacing:-.01em;color:inherit;}
@@ -1344,7 +1344,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 19.10 design35</div>
+        <div class="pf-build" id="pfBuild">сборка 20.10 design36</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5532,7 +5532,9 @@
     var buy=document.getElementById("csBuy");
     function setSel(i){ sel=i; var t=T.items[i]; if(t) buy.textContent="Купить "+t.name+" за "+t.price;
       var d=document.getElementById("csDots"); if(d) for(var k=0;k<d.children.length;k++) d.children[k].classList.toggle("on",k===i);
-      var cs=box.querySelectorAll(".cs-tar"); for(var q=0;q<cs.length;q++) cs[q].classList.toggle("cur",q===i); }
+      hl(i); }
+    var hlCur=-1;
+    function hl(i){ if(i===hlCur) return; hlCur=i; var cs=box.querySelectorAll(".cs-tar"); for(var q=0;q<cs.length;q++) cs[q].classList.toggle("cur",q===i); }
     setSel(sel);
     var rail=document.getElementById("csTars");
     if(rail){
@@ -5542,7 +5544,10 @@
       function nearest(){ var rr=rail.getBoundingClientRect(), mid=rr.left+rr.width/2, best=sel, bd=1e9;
         for(var i=0;i<rail.children.length;i++){ var cr=rail.children[i].getBoundingClientRect(), dd=Math.abs(cr.left+cr.width/2-mid); if(dd<bd){ bd=dd; best=i; } } return best; }
       function settle(){ var n=nearest(); if(lock>=0){ if(n===lock) lock=-1; return; } if(n!==sel){ haptic("selection"); setSel(n); } }
-      rail.addEventListener("scroll", function(){ clearTimeout(tmr); tmr=setTimeout(settle,110); }, {passive:true});
+      // highlight follows the card crossing the centre right away; price/haptic still wait for the settle
+      var raf=0;
+      rail.addEventListener("scroll", function(){ clearTimeout(tmr); tmr=setTimeout(settle,110);
+        if(lock<0 && !raf) raf=requestAnimationFrame(function(){ raf=0; if(lock<0) hl(nearest()); }); }, {passive:true});
       rail.addEventListener("touchstart", function(){ lock=-1; }, {passive:true});
       rail.addEventListener("click", function(e){ var el=e.target.closest(".cs-tar"); if(!el) return; var i=+el.getAttribute("data-i"); if(i===sel) return; lock=i; haptic("selection"); setSel(i); el.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); setTimeout(function(){ lock=-1; },900); });
     }
