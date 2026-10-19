@@ -648,24 +648,28 @@
   .cs-rev .pv-rev-hd span{color:var(--fg-tertiary);}.cs-rev .pv-rev-hd h3{color:var(--fg);}
   .cs-ph{flex:none;width:72%;max-width:300px;height:170px;margin:0;scroll-snap-align:start;border-radius:18px;background:var(--fill);display:flex;align-items:center;justify-content:center;}
   .cs-ph span{font:500 13px 'Inter',sans-serif;color:var(--fg-tertiary);}
-  .cs-tars{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;margin:14px -16px 0;padding:6px 12% 12px;scrollbar-width:none;align-items:stretch;overscroll-behavior-x:contain;}
+  .cs-tblock{min-height:calc(100dvh - var(--pvcta,180px) - 24px);display:flex;flex-direction:column;justify-content:center;}
+  .cs-tars{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;margin:10px -16px 0;padding:4px calc((100vw - min(68vw,300px)) / 2) 6px;scrollbar-width:none;align-items:stretch;overscroll-behavior-x:contain;}
   .cs-tars::-webkit-scrollbar{display:none;}
-  .cs-tar{flex:none;width:76%;max-width:320px;scroll-snap-align:center;padding:18px;border-radius:22px;background:var(--elevated);box-shadow:var(--shadow-card);opacity:.55;transform:scale(.96);transition:opacity .25s,transform .25s;cursor:pointer;}
-  .cs-tar.cur{opacity:1;transform:none;box-shadow:var(--shadow-float);}
-  .cs-tar-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-  .cs-tar-hd b{font:700 19px 'Inter',sans-serif;color:var(--fg);}
-  .cs-tar-hd em{font:600 10.5px 'Inter',sans-serif;font-style:normal;letter-spacing:.08em;text-transform:uppercase;color:#4a3200;background:linear-gradient(145deg,#ffe9a8,#f2bf3e);padding:5px 9px;border-radius:999px;}
-  .cs-flow{margin-top:4px;font:400 13px 'Inter',sans-serif;color:var(--fg-tertiary);}
-  .cs-price{display:flex;align-items:baseline;gap:8px;margin:14px 0 12px;}
-  .cs-price b{font:700 28px 'Inter',sans-serif;letter-spacing:-.02em;color:var(--fg);}
-  .cs-price s{font:400 14px 'Inter',sans-serif;color:var(--fg-tertiary);}
-  .cs-tar ul{list-style:none;margin:0;padding:12px 0 0;border-top:1px solid var(--separator);display:flex;flex-direction:column;gap:9px;}
-  .cs-tar li{display:flex;gap:9px;font:400 14px/1.4 'Inter',sans-serif;color:var(--fg-secondary);}
-  .cs-tar li span{flex:none;width:16px;height:16px;margin-top:2px;color:var(--fg);}.cs-tar li span svg{width:16px;height:16px;}
-  .cs-dots{display:flex;justify-content:center;gap:6px;margin-top:2px;}
+  .cs-tar{flex:none;width:min(68vw,300px);scroll-snap-align:center;padding:18px 18px 16px;border-radius:24px;background:var(--elevated);color:var(--fg);box-shadow:var(--shadow-card);transition:background-color .3s ease,color .3s ease;cursor:pointer;}
+  .cs-tar.cur{background:var(--accent);color:var(--on-accent);box-shadow:var(--shadow-float);}
+  .cs-tar-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px;}
+  .cs-tar-hd b{font:600 20px/1.2 'Inter',sans-serif;letter-spacing:-.01em;color:inherit;}
+  .cs-tar-hd em{font:600 10.5px 'Inter',sans-serif;font-style:normal;letter-spacing:.09em;text-transform:uppercase;color:#fff;background:#ff8a1f;padding:6px 10px;border-radius:999px;white-space:nowrap;}
+  .cs-flow{margin-top:4px;font:400 13px 'Inter',sans-serif;opacity:.55;}
+  .cs-price{display:flex;align-items:baseline;gap:9px;margin:12px 0 0;}
+  .cs-price b{font:700 28px 'Inter',sans-serif;letter-spacing:-.02em;color:inherit;}
+  .cs-price s{font:400 13px 'Inter',sans-serif;opacity:.45;}
+  .cs-tline{height:1px;background:currentColor;opacity:.14;margin:12px 0 0;}
+  .cs-tg{margin:10px 0 6px;font:600 11px 'Inter',sans-serif;letter-spacing:.12em;text-transform:uppercase;opacity:.5;}
+  .cs-tar ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;}
+  .cs-tar li{display:flex;align-items:flex-start;gap:9px;font:400 14px/1.3 'Inter',sans-serif;color:inherit;}
+  .cs-tar li span{flex:none;width:18px;height:18px;margin-top:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,currentColor 13%,transparent);}
+  .cs-tar li span svg{width:13px;height:13px;}
+  .cs-dots{display:flex;justify-content:center;gap:6px;margin-top:8px;}
+  .cs-hint{text-align:center;margin-top:6px;font:400 12.5px 'Inter',sans-serif;color:var(--fg-tertiary);}
   .cs-dots i{width:6px;height:6px;border-radius:50%;background:var(--fg-quaternary);transition:all .2s;}
   .cs-dots i.on{width:18px;border-radius:3px;background:var(--fg);}
-  .cs-hint{text-align:center;margin-top:8px;font:400 12.5px 'Inter',sans-serif;color:var(--fg-tertiary);}
   .cs-guar{margin-top:26px;padding:18px 20px;border-radius:var(--radius-lg);background:var(--elevated);box-shadow:inset 0 0 0 1.5px var(--fg);}
   .cs-guar span{font:600 11px 'Inter',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#c8890f;}
   .cs-guar h3{font:700 22px/1.2 'Inter',sans-serif;letter-spacing:-.02em;margin:8px 0 8px;color:var(--fg);}
@@ -1319,7 +1323,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 19.10 design33</div>
+        <div class="pf-build" id="pfBuild">сборка 19.10 design34</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5487,14 +5491,18 @@
     var R=c.reviews;
     var rev = R ? '<div class="pv-rev cs-rev"><div class="pv-rev-hd"><span>'+esc(R.eyebrow||"Отзывы")+'</span><h3>'+esc(R.title||"")+'</h3></div>'+
       '<div class="pv-rail" id="csRev">'+((R.items&&R.items.length)?R.items:[0,0,0]).map(function(x){ return x ? '<figure class="pv-card"><img src="'+esc(x)+'" alt="Отзыв" loading="lazy"></figure>' : '<figure class="cs-ph"><span>Отзыв появится здесь</span></figure>'; }).join("")+'</div></div>' : '';
-    var tar = T.items.length ? sec(T.eyebrow||"Тарифы", T.title||"")+
+    var CKS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 12.5l3.2 3.2L17 9"/></svg>';
+    function tarBody(t){
+      if(t.groups) return t.groups.map(function(g){ return '<div class="cs-tg">'+esc(g.label)+'</div><ul>'+g.items.map(function(f){ return '<li><span>'+CKS+'</span>'+esc(f)+'</li>'; }).join("")+'</ul>'; }).join("");
+      return '<ul>'+(t.features||[]).map(function(f){ return '<li><span>'+CKS+'</span>'+esc(f)+'</li>'; }).join("")+'</ul>';
+    }
+    var tar = T.items.length ? '<div class="cs-tblock">'+sec(T.eyebrow||"Тарифы", T.title||"")+
       '<div class="cs-tars" id="csTars">'+T.items.map(function(t,i){ return '<div class="cs-tar'+(t.popular?' pop':'')+'" data-i="'+i+'">'+
         '<div class="cs-tar-hd"><b>'+esc(t.name)+'</b>'+(t.popular?'<em>Популярный</em>':'')+'</div>'+
         (T.flow?'<div class="cs-flow">'+esc(T.flow)+'</div>':'')+
         '<div class="cs-price"><b>'+esc(t.price)+'</b>'+(t.old?'<s>'+esc(t.old)+'</s>':'')+'</div>'+
-        '<ul>'+t.features.map(function(f){ return '<li><span>'+CK+'</span>'+esc(f)+'</li>'; }).join("")+'</ul></div>'; }).join("")+'</div>'+
-      '<div class="cs-dots" id="csDots">'+T.items.map(function(_,i){ return '<i'+(i===sel?' class="on"':'')+'></i>'; }).join("")+'</div>'+
-      (T.hint?'<div class="cs-hint">'+esc(T.hint)+'</div>':'') : '';
+        '<div class="cs-tline"></div>'+tarBody(t)+'</div>'; }).join("")+'</div>'+
+      '<div class="cs-dots" id="csDots">'+T.items.map(function(_,i){ return '<i'+(i===sel?' class="on"':'')+'></i>'; }).join("")+'</div>'+(T.hint?'<div class="cs-hint">'+esc(T.hint)+'</div>':'')+'</div>' : '';
     var G=c.guarantee, guar = G ? '<div class="cs-guar"><span>'+esc(G.eyebrow)+'</span><h3>'+esc(G.title)+'</h3><p>'+esc(G.text)+'</p></div>' : '';
     box.innerHTML = '<div class="pv cs">'+media+
       '<div class="cs-head"><span>'+esc(c.eyebrow||"")+'</span><h2>'+esc(c.headline||c.title||"")+'</h2>'+(c.lead?'<p>'+esc(c.lead)+'</p>':'')+'</div>'+
