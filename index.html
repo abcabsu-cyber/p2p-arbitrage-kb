@@ -5516,11 +5516,14 @@
     var rail=document.getElementById("csTars");
     if(rail){
       var card=rail.children[sel]; if(card) rail.scrollLeft = card.offsetLeft - (rail.clientWidth-card.offsetWidth)/2;
-      var raf=0; rail.addEventListener("scroll", function(){ if(raf) return; raf=requestAnimationFrame(function(){ raf=0;
-        var rr=rail.getBoundingClientRect(), mid=rr.left+rr.width/2, best=sel, bd=1e9;
-        for(var i=0;i<rail.children.length;i++){ var cr=rail.children[i].getBoundingClientRect(), dd=Math.abs(cr.left+cr.width/2-mid); if(dd<bd){ bd=dd; best=i; } }
-        if(best!==sel){ haptic("selection"); setSel(best); } }); }, {passive:true});
-      rail.addEventListener("click", function(e){ var el=e.target.closest(".cs-tar"); if(!el) return; var i=+el.getAttribute("data-i"); el.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); setSel(i); });
+      // pick the tariff only when the swipe has settled: no flicker of the price while cards pass by
+      var lock=-1, tmr=0;
+      function nearest(){ var rr=rail.getBoundingClientRect(), mid=rr.left+rr.width/2, best=sel, bd=1e9;
+        for(var i=0;i<rail.children.length;i++){ var cr=rail.children[i].getBoundingClientRect(), dd=Math.abs(cr.left+cr.width/2-mid); if(dd<bd){ bd=dd; best=i; } } return best; }
+      function settle(){ var n=nearest(); if(lock>=0){ if(n===lock) lock=-1; return; } if(n!==sel){ haptic("selection"); setSel(n); } }
+      rail.addEventListener("scroll", function(){ clearTimeout(tmr); tmr=setTimeout(settle,110); }, {passive:true});
+      rail.addEventListener("touchstart", function(){ lock=-1; }, {passive:true});
+      rail.addEventListener("click", function(e){ var el=e.target.closest(".cs-tar"); if(!el) return; var i=+el.getAttribute("data-i"); if(i===sel) return; lock=i; haptic("selection"); setSel(i); el.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); setTimeout(function(){ lock=-1; },900); });
     }
     var chips=document.getElementById("csChips");
     if(chips) chips.addEventListener("click", function(e){ var b=e.target.closest(".cs-chip"); if(!b) return; var i=+b.getAttribute("data-m"); if(i===mod) return; mod=i; haptic("selection");
