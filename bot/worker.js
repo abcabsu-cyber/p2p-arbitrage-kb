@@ -13,6 +13,8 @@
 //   PAY2328_KEY       API key (not the Payout key) from my.2328.io (Secret)
 //   JOIN_URL          invite link of the private channel (with join requests on); shown only to paid users (Variable)
 //   PRIVATE_CHANNEL   numeric id of the private channel (e.g. -100123...); the bot must be its admin (invite + ban rights); enables auto-approve of join requests and removal after expiry (Variable)
+//   COURSE_CH_ECO / COURSE_CH_STD / COURSE_CH_PRO  numeric ids of the course tier channels (bot = admin with invite + ban rights) (Variables)
+//   COURSE_JOIN_ECO / COURSE_JOIN_STD / COURSE_JOIN_PRO  invite links of those channels, join requests ON (Variables)
 //   CRYPTOBOT_TOKEN   Crypto Pay API token from @CryptoBot → Crypto Pay (Secret); webhook URL: <worker>/pay/webhook-cryptobot
 //   PAY_PROVIDER      optional: "2328" or "heleket" (by default 2328 if its keys are set)
 //   PAY_AMOUNT / PAY_CURRENCY  optional variables, default 4990 / RUB
@@ -38,6 +40,13 @@ const CFG = {
     "• обучение и закрытое сообщество\n\n" +
     "Сейчас мы только начали наполнять библиотеку, впереди много нового. А пока изучайте то, что уже есть:",
   PAY_AMOUNT: "4990",
+  // course tiers: price in RUB, rank for "this tier or higher", env names of the tier channel and its invite link
+  COURSE: {
+    eco: { name: "Эконом", amount: "9990", rank: 1 },
+    std: { name: "Стандарт", amount: "24990", rank: 2 },
+    pro: { name: "Премиум", amount: "44990", rank: 3 },
+  },
+  COURSE_START: Date.UTC(2026, 11, 1), // course channels accept members from this day (same as the private channel)
   PAY_CURRENCY: "RUB",
   PAY_LIFETIME: 3600,                 // invoice lifetime, seconds
   HELEKET_IP: "31.133.220.8",
@@ -168,7 +177,29 @@ async function kickFromPrivate(env, uid) {
   if (b && b.ok) await tg(env, "unbanChatMember", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid), only_if_banned: true });   // ban+unban = removal, the user can come back after renewing
   return !!(b && b.ok);
 }
+// course tier channels: COURSE_CH_ECO / COURSE_CH_STD / COURSE_CH_PRO (numeric ids), invite links COURSE_JOIN_ECO / _STD / _PRO
+const courseChannel = (env, chatId) => Object.keys(CFG.COURSE).find((t) => env["COURSE_CH_" + t.toUpperCase()] && String(env["COURSE_CH_" + t.toUpperCase()]) === String(chatId));
+async function handleCourseJoin(env, jr, tier) {
+  const uid = jr.from.id, chat = jr.user_chat_id || uid;
+  const say = (text) => tg(env, "sendMessage", { chat_id: chat, text }).catch(() => {});
+  const c = await getCourse(env, uid);
+  if (courseRank(c) < CFG.COURSE[tier].rank || (await isBanned(env, uid))) {
+    await tg(env, "declineChatJoinRequest", { chat_id: jr.chat.id, user_id: uid }).catch(() => {});
+    await say(`Не нашли оплаты тарифа «${CFG.COURSE[tier].name}» для этого аккаунта. Оплатить обучение можно в приложении, раздел «Обучение». Если вы уже оплатили, напишите нам: @hanballit`);
+    return;
+  }
+  if (Date.now() < CFG.COURSE_START) {
+    await env.SUBS.put(`jrc:${uid}:${tier}`, String(jr.chat.id), { expirationTtl: 86400 * 60 });
+    await say(`Заявка принята ✅ Канал обучения откроется ${fmtDate(CFG.COURSE_START)}, мы одобрим её автоматически.`);
+    return;
+  }
+  const r = await tg(env, "approveChatJoinRequest", { chat_id: jr.chat.id, user_id: uid });
+  if (r && r.ok) await say(`Заявка одобрена, добро пожаловать в канал обучения «${CFG.COURSE[tier].name}»! ✅`);
+  else await dbg(env, { join: "COURSE APPROVE FAILED " + String(r && r.description).slice(0, 60), uid });
+}
 async function handleJoinRequest(env, jr) {
+  const ct = courseChannel(env, jr.chat.id);
+  if (ct) return handleCourseJoin(env, jr, ct);
   if (!privOn(env) || String(jr.chat.id) !== String(env.PRIVATE_CHANNEL)) return;
   const uid = jr.from.id, chat = jr.user_chat_id || uid;
   const say = (text) => tg(env, "sendMessage", { chat_id: chat, text }).catch(() => {});
@@ -188,7 +219,21 @@ async function handleJoinRequest(env, jr) {
   else await dbg(env, { join: "APPROVE FAILED " + String(r && r.description).slice(0, 60), uid });
 }
 // hourly: approve requests waiting for the opening day, remove people whose access has ended
+async function courseSweep(env) {
+  if (Date.now() < CFG.COURSE_START) return;
+  const l = await env.SUBS.list({ prefix: "jrc:", limit: 12 });
+  for (const k of l.keys) {
+    const [, uid, tier] = k.name.split(":");
+    const ch = env["COURSE_CH_" + String(tier).toUpperCase()];
+    if (ch && CFG.COURSE[tier] && courseRank(await getCourse(env, uid)) >= CFG.COURSE[tier].rank) {
+      const r = await tg(env, "approveChatJoinRequest", { chat_id: ch, user_id: Number(uid) }).catch(() => null);
+      if (r && r.ok) await tg(env, "sendMessage", { chat_id: Number(uid), text: `Обучение началось! Заявка в канал «${CFG.COURSE[tier].name}» одобрена ✅` }).catch(() => {});
+    }
+    await env.SUBS.delete(k.name);
+  }
+}
 async function privateSweep(env) {
+  await courseSweep(env).catch((e) => console.log("course sweep", e));
   if (!privOn(env)) return;
   const now = Date.now();
   if (now >= CFG.PRIVAT_START) {
@@ -271,20 +316,30 @@ async function call2328(env, path, obj) {
   const j = await r.json().catch(() => ({}));
   return { ok: r.ok && j.state === 0 && !!j.result, j, status: r.status };
 }
-async function createInvoice2328(env, user) {
+// what is being bought: the private channel (default) or a course tier
+function offerFor(env, body) {
+  const t = body && body.product === "course" ? CFG.COURSE[body.tier] : null;
+  if (body && body.product === "course" && !t) return null;
+  const cur = String(env.PAY_CURRENCY || CFG.PAY_CURRENCY);
+  if (t) return { product: "course", tier: body.tier, amount: t.amount, currency: "RUB", desc: `P2P Study: обучение, тариф «${t.name}»` };
+  return { product: "privat", amount: String(env.PAY_AMOUNT || CFG.PAY_AMOUNT), currency: cur, desc: "P2P Study: доступ в закрытый канал" };
+}
+const ordExtra = (o) => (o && o.product === "course" ? { product: "course", tier: o.tier } : {});
+async function createInvoice2328(env, user, offer) {
+  offer = offer || offerFor(env, null);
   const order = `u${user.id}-${Date.now().toString(36)}`;
   const r = await call2328(env, "/v1/payment", {
-    amount: String(env.PAY_AMOUNT || CFG.PAY_AMOUNT),
-    currency: String(env.PAY_CURRENCY || CFG.PAY_CURRENCY),
+    amount: offer.amount,
+    currency: offer.currency,
     order_id: order,
     url_callback: CFG.SELF + "/pay/webhook2328",
     url_success: `https://t.me/${CFG.BOT_USERNAME}`,   // back to Telegram, not the public site
     url_return: `https://t.me/${CFG.BOT_USERNAME}`,
-    description: "P2P Study: доступ в закрытый канал",
+    description: offer.desc,
     ttl_seconds: CFG.PAY_LIFETIME,
   });
   if (!r.ok || !r.j.result.url) return { error: (r.j && (r.j.message || r.j.error)) || "2328 " + r.status };
-  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: r.j.result.uuid, p: "2328", who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
+  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: r.j.result.uuid, p: "2328", ...ordExtra(offer), who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
   await env.SUBS.put(`lastord:${user.id}`, order, { expirationTtl: 60 * 60 * 24 });
   return { url: r.j.result.url, order };
 }
@@ -351,13 +406,14 @@ async function callCryptoBot(env, method, params, get) {
   const j = await r.json().catch(() => ({}));
   return { ok: r.ok && j.ok === true && !!j.result, j, status: r.status };
 }
-async function createInvoiceCryptoBot(env, user) {
+async function createInvoiceCryptoBot(env, user, offer) {
+  offer = offer || offerFor(env, null);
   const order = `u${user.id}-${Date.now().toString(36)}`;
   const r = await callCryptoBot(env, "createInvoice", {
     currency_type: "fiat",
-    fiat: String(env.PAY_CURRENCY || CFG.PAY_CURRENCY),
-    amount: String(env.PAY_AMOUNT || CFG.PAY_AMOUNT),
-    description: "P2P Study: доступ в закрытый канал",
+    fiat: offer.currency,
+    amount: offer.amount,
+    description: offer.desc,
     payload: order,
     allow_comments: false,
     allow_anonymous: false,
@@ -367,7 +423,7 @@ async function createInvoiceCryptoBot(env, user) {
   });
   const inv = r.j && r.j.result;
   if (!r.ok || !inv.bot_invoice_url) return { error: (r.j && r.j.error && (r.j.error.name || r.j.error.code)) || "cryptobot " + r.status };
-  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: String(inv.invoice_id), p: "cryptobot", who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
+  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: String(inv.invoice_id), p: "cryptobot", ...ordExtra(offer), who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
   await env.SUBS.put(`lastord:${user.id}`, order, { expirationTtl: 60 * 60 * 24 });
   return { url: inv.bot_invoice_url, order, tg: true };
 }
@@ -409,11 +465,12 @@ async function reconcileCryptoBot(env, order, ord) {
   if (n.status === "paid") await processPayment(env, n, "paid");
 }
 
-async function createInvoice(env, user) {
+async function createInvoice(env, user, offer) {
+  offer = offer || offerFor(env, null);
   const order = `u${user.id}-${Date.now().toString(36)}`;
   const body = JSON.stringify({
-    amount: String(env.PAY_AMOUNT || CFG.PAY_AMOUNT),
-    currency: String(env.PAY_CURRENCY || CFG.PAY_CURRENCY),
+    amount: offer.amount,
+    currency: offer.currency,
     order_id: order,
     url_callback: CFG.SELF + "/pay/webhook",
     url_success: `https://t.me/${CFG.BOT_USERNAME}`,   // back to Telegram, not the public site
@@ -428,7 +485,7 @@ async function createInvoice(env, user) {
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.result || !j.result.url) return { error: j.message || (j.errors ? JSON.stringify(j.errors) : "heleket " + r.status) };
-  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: j.result.uuid, who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
+  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: j.result.uuid, ...ordExtra(offer), who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
   return { url: j.result.url, order };
 }
 
@@ -441,6 +498,15 @@ async function grantAccess(env, uid, info) {
   return rec;
 }
 
+const getCourse = async (env, uid) => { const r = await env.SUBS.get(`course:${uid}`); return r ? JSON.parse(r) : null; };
+const courseRank = (c) => (c && CFG.COURSE[c.tier] ? CFG.COURSE[c.tier].rank : 0);
+async function grantCourse(env, uid, tier, info) {
+  const cur = await getCourse(env, uid);
+  const best = cur && courseRank(cur) >= CFG.COURSE[tier].rank ? cur.tier : tier;   // keep the highest tier bought
+  const rec = { tier: best, tiers: [...new Set([...((cur && cur.tiers) || []), tier])], ts: Date.now(), orders: [...((cur && cur.orders) || []), info.order].filter(Boolean), amount: info.amount, currency: info.currency };
+  await env.SUBS.put(`course:${uid}`, JSON.stringify(rec), { metadata: { tier: rec.tier, ts: rec.ts, n: rec.orders.length } });
+  return rec;
+}
 async function handlePayWebhook(env, req) {
   if (!env.HELEKET_KEY) return new Response("off", { status: 404 });
   const raw = await req.text();
@@ -481,8 +547,8 @@ async function processPaymentInner(env, body, status) {
   const details = (who) => [
     who,
     `💳 Сумма: ${sumTxt}`,
-    `🔖 Тариф: Приват`,
-    `📅 Дней: ${CFG.PRIVAT_DAYS}`,
+    isCourse ? `🔖 Тариф: Обучение · ${esc(courseName)}` : `🔖 Тариф: Приват`,
+    isCourse ? `📅 Доступ: навсегда + приват на ${CFG.PRIVAT_DAYS} дн.` : `📅 Дней: ${CFG.PRIVAT_DAYS}`,
     crypt && `💱 Оплачено: ${esc(crypt)}`,
     body.commission ? `🏦 Комиссия сервиса: ${esc(body.commission)}` : "",
     `🕒 Время: ${fmtDT(Date.now())}`,
@@ -492,6 +558,8 @@ async function processPaymentInner(env, body, status) {
   ].filter(Boolean).join("\n");
   const ordKV = JSON.parse((await env.SUBS.get(`ord:${body.order_id}`)) || "null");
   const uid0 = ordKV ? ordKV.uid : Number(body.additional_data);
+  var isCourse = !!(ordKV && ordKV.product === "course" && CFG.COURSE[ordKV.tier]);
+  var courseName = isCourse ? CFG.COURSE[ordKV.tier].name : "";
 
   if (PAY_WARN[status]) {
     let extra = "";
@@ -514,16 +582,27 @@ async function processPaymentInner(env, body, status) {
   if (await env.SUBS.get(`rcpt:${body.order_id}`)) return new Response("ok");   // this order was already processed (also after a /revoke)
   const cur = await getPaid(env, uid);
   if (cur && cur.orders && cur.orders.includes(body.order_id)) return new Response("ok");   // repeated notification
+  const curCourse = isCourse ? await getCourse(env, uid) : null;
+  if (curCourse && curCourse.orders && curCourse.orders.includes(body.order_id)) return new Response("ok");
   const rcptVal = JSON.stringify({ uid, ts: Date.now(), status, amount: body.amount, currency: body.currency, usd: body.payment_amount_usd, payer: crypt, uuid: body.uuid, txid: body.txid || "" });
   await env.SUBS.put(`rcpt:${body.order_id}`, rcptVal, { expirationTtl: 86400 * 800 });   // claim before grant: stops sequential retries; KV is not atomic, so truly simultaneous deliveries are not blocked
-  let rec;
-  try { rec = await grantAccess(env, uid, { order: body.order_id, amount: body.payment_amount_usd || body.amount, currency: body.currency }); }
+  let rec, crec;
+  try {
+    if (isCourse) {
+      crec = await grantCourse(env, uid, ordKV.tier, { order: body.order_id, amount: body.payment_amount_usd || body.amount, currency: body.currency });
+      rec = await grantAccess(env, uid, { order: "bonus:" + body.order_id, amount: "bonus", currency: "" });   // bonus: a month of the private channel
+    } else rec = await grantAccess(env, uid, { order: body.order_id, amount: body.payment_amount_usd || body.amount, currency: body.currency });
+  }
   catch (e) { await env.SUBS.delete(`rcpt:${body.order_id}`).catch(() => {}); throw e; }   // grant failed: release the claim so the provider's retry can succeed
-  await notifyOwner(env, `🛒 <b>НОВАЯ ОПЛАТА${status === "paid_over" ? " (переплата)" : ""}${cur ? " · продление" : ""}</b>\n\n${details(await whoBlock(uid))}\n⏳ Доступ до: ${fmtDate(rec.until)}`);
+  await notifyOwner(env, isCourse
+    ? `🎓 <b>ОПЛАТА ОБУЧЕНИЯ${status === "paid_over" ? " (переплата)" : ""}</b>\n\n${details(await whoBlock(uid))}\n⏳ Бонус-приват до: ${fmtDate(rec.until)}`
+    : `🛒 <b>НОВАЯ ОПЛАТА${status === "paid_over" ? " (переплата)" : ""}${cur ? " · продление" : ""}</b>\n\n${details(await whoBlock(uid))}\n⏳ Доступ до: ${fmtDate(rec.until)}`);
   try {
     const r = await tg(env, "sendMessage", {
       chat_id: uid,
-      text: `Оплата получена, спасибо! ✅\n\nВаш доступ к привату открыт до ${fmtDate(rec.until)}.\nПодайте заявку в закрытый канал кнопкой в приложении, раздел «Приват». До 1 декабря заявка ждёт, в день старта мы одобрим её автоматически.`,
+      text: isCourse
+        ? `Оплата обучения получена, спасибо! ✅\n\nТариф «${courseName}»: доступ навсегда. Подайте заявку в канал обучения кнопкой в приложении, раздел «Обучение». До ${fmtDate(CFG.COURSE_START)} заявка ждёт, в день старта мы одобрим её автоматически.\n\nБонус: доступ к привату до ${fmtDate(rec.until)} — заявка в закрытый канал в разделе «Приват».`
+        : `Оплата получена, спасибо! ✅\n\nВаш доступ к привату открыт до ${fmtDate(rec.until)}.\nПодайте заявку в закрытый канал кнопкой в приложении, раздел «Приват». До 1 декабря заявка ждёт, в день старта мы одобрим её автоматически.`,
     });
     if (!r.ok) await dbg(env, { pay: "PAYER MSG FAILED " + (r.description || r.error_code), uid });
   } catch (e) { await dbg(env, { pay: "PAYER MSG ERROR " + String(e && e.message || e).slice(0, 60), uid }); }
@@ -661,7 +740,7 @@ async function handleUpdate(env, ctx, upd) {
   if (upd.chat_join_request) { await handleJoinRequest(env, upd.chat_join_request); return; }
   if (upd.my_chat_member && upd.my_chat_member.chat.type === "channel" && upd.my_chat_member.new_chat_member.status === "administrator" && env.OWNER_ID) {   // tells the owner the channel id for PRIVATE_CHANNEL
     const c = upd.my_chat_member.chat;
-    await tg(env, "sendMessage", { chat_id: env.OWNER_ID, parse_mode: "HTML", text: `Бот стал администратором канала «${esc(c.title || "")}».\nID канала: <code>${c.id}</code>${String(c.id) === String(env.PRIVATE_CHANNEL) ? "\nЭто закрытый канал из настроек ✅" : "\nЕсли это закрытый канал, впишите этот ID в переменную PRIVATE_CHANNEL."}` }).catch(() => {});
+    await tg(env, "sendMessage", { chat_id: env.OWNER_ID, parse_mode: "HTML", text: `Бот стал администратором канала «${esc(c.title || "")}».\nID канала: <code>${c.id}</code>${String(c.id) === String(env.PRIVATE_CHANNEL) ? "\nЭто закрытый канал из настроек ✅" : "\nЕсли это закрытый канал привата, впишите этот ID в переменную PRIVATE_CHANNEL. Если это канал обучения: COURSE_CH_ECO, COURSE_CH_STD или COURSE_CH_PRO."}` }).catch(() => {});
     return;
   }
   // user blocked / unblocked the bot
@@ -736,6 +815,21 @@ async function handleUpdate(env, ctx, upd) {
     return;
   }
 
+  const gc = text.match(/^\/grantcourse\s+(\d+)\s+(eco|std|pro)\s*$/);
+  if (gc) {
+    const c = await grantCourse(env, Number(gc[1]), gc[2], { order: "manual-" + Date.now(), amount: "manual", currency: "" });
+    await tg(env, "sendMessage", { chat_id: chatId, text: `Обучение выдано пользователю ${gc[1]}: тариф «${CFG.COURSE[c.tier].name}», навсегда. Бонус-приват выдавайте отдельно: /grant ${gc[1]}` });
+    return;
+  }
+  const rc = text.match(/^\/revokecourse\s+(\d+)\s*$/);
+  if (rc) {
+    const had = await getCourse(env, rc[1]);
+    await env.SUBS.delete(`course:${rc[1]}`);
+    let kicked = 0;
+    for (const t of Object.keys(CFG.COURSE)) { const ch = env["COURSE_CH_" + t.toUpperCase()]; if (!ch) continue; const b = await tg(env, "banChatMember", { chat_id: ch, user_id: Number(rc[1]) }).catch(() => null); if (b && b.ok) { kicked++; await tg(env, "unbanChatMember", { chat_id: ch, user_id: Number(rc[1]), only_if_banned: true }).catch(() => {}); } }
+    await tg(env, "sendMessage", { chat_id: chatId, text: had ? `Обучение пользователя ${rc[1]} отозвано${kicked ? ", из каналов обучения убран" : ""}.` : `У пользователя ${rc[1]} не было обучения.` });
+    return;
+  }
   const gr = text.match(/^\/grant\s+(\d+)\s*$/);
   if (gr) {
     const rec = await grantAccess(env, Number(gr[1]), { order: "manual-" + Date.now(), amount: "manual", currency: "" });
@@ -882,7 +976,7 @@ async function handleUpdate(env, ctx, upd) {
 
   await tg(env, "sendMessage", {
     chat_id: chatId,
-    text: "Команды владельца:\n/post — рассылка о самом новом материале (или /post <id> о конкретном)\n/broadcast <текст> — произвольная рассылка\n/test <текст> и /post_test — то же, но только вам (проверка)\n/undo — удалить последнюю рассылку у всех (до 48 часов)\n/cancel — остановить идущую рассылку\n/stats — число подписчиков\n/paid — сколько оплатили\n/order <номер заказа> — детали оплаты\n/backup — выгрузка списка оплативших файлом\n/users — список подписчиков файлом (CSV)\n/who <id> — сведения о пользователе\n/ban <id> — исключить, /unban <id> — вернуть\n/test2328 [статус] — тестовый webhook 2328 (проверка подписи, без оплаты)\n/grant <id> — выдать доступ вручную\n/revoke <id> — отозвать оплату",
+    text: "Команды владельца:\n/post — рассылка о самом новом материале (или /post <id> о конкретном)\n/broadcast <текст> — произвольная рассылка\n/test <текст> и /post_test — то же, но только вам (проверка)\n/undo — удалить последнюю рассылку у всех (до 48 часов)\n/cancel — остановить идущую рассылку\n/stats — число подписчиков\n/paid — сколько оплатили\n/order <номер заказа> — детали оплаты\n/backup — выгрузка списка оплативших файлом\n/users — список подписчиков файлом (CSV)\n/who <id> — сведения о пользователе\n/ban <id> — исключить, /unban <id> — вернуть\n/test2328 [статус] — тестовый webhook 2328 (проверка подписи, без оплаты)\n/grant <id> — выдать доступ к привату вручную\n/grantcourse <id> <eco|std|pro> — выдать обучение вручную\n/revokecourse <id> — отозвать обучение\n/revoke <id> — отозвать оплату",
   });
 }
 
@@ -1042,18 +1136,25 @@ const handlers = {
       let paid = await getPaid(env, user.id);
       if (url.pathname === "/api/status") {
         const rk = "rc" + user.id, rNow = Date.now();
-        if (!hasAccess(paid) && !(RECON.get(rk) > rNow - 15000)) { RECON.set(rk, rNow); if (RECON.size > 2000) RECON.clear(); try { await reconcile2328(env, user.id); paid = await getPaid(env, user.id); } catch (e) { await dbg(env, { reconcile: "2328 FAILED " + String(e && e.message || e).slice(0, 80) }); } }   // lost 2328/Crypto Bot webhook, orders from the last 24 h (Heleket has no reconcile path)
-        return json({ ok: true, paid: hasAccess(paid), until: paid ? paid.until : null, join: hasAccess(paid) && env.JOIN_URL ? env.JOIN_URL : undefined }, 200, h);
+        let course = await getCourse(env, user.id);
+        if ((!hasAccess(paid) || (body.product === "course" && !course)) && !(RECON.get(rk) > rNow - 15000)) { RECON.set(rk, rNow); if (RECON.size > 2000) RECON.clear(); try { await reconcile2328(env, user.id); paid = await getPaid(env, user.id); course = await getCourse(env, user.id); } catch (e) { await dbg(env, { reconcile: "2328 FAILED " + String(e && e.message || e).slice(0, 80) }); } }   // lost 2328/Crypto Bot webhook, orders from the last 24 h (Heleket has no reconcile path)
+        const cinfo = course && CFG.COURSE[course.tier] ? { tier: course.tier, name: CFG.COURSE[course.tier].name, join: env["COURSE_JOIN_" + course.tier.toUpperCase()] || undefined } : undefined;
+        return json({ ok: true, paid: hasAccess(paid), until: paid ? paid.until : null, join: hasAccess(paid) && env.JOIN_URL ? env.JOIN_URL : undefined, course: cinfo }, 200, h);
       }
       RECON.delete("rc" + user.id);   // new invoice: the next status check may ask the provider right away
       const viaCB = body.method === "cryptobot";
       const prov = viaCB ? (env.CRYPTOBOT_TOKEN ? "cryptobot" : null) : payProvider(env);
       if (!prov) return json({ ok: false, error: "payments not configured" }, 503, h);
-      if (hasAccess(paid) && paid.until - Date.now() > 10 * 86400000) return json({ ok: true, paid: true, until: paid.until }, 200, h);   // already paid, renewal opens 10 days before the end
-      let inv = prov === "cryptobot" ? await createInvoiceCryptoBot(env, user) : prov === "2328" ? await createInvoice2328(env, user) : await createInvoice(env, user);
+      const offer = offerFor(env, body);
+      if (!offer) return json({ ok: false, error: "bad tier" }, 400, h);
+      if (offer.product === "course") {
+        const c = await getCourse(env, user.id);
+        if (courseRank(c) >= CFG.COURSE[offer.tier].rank) return json({ ok: true, paid: true, course: { tier: c.tier } }, 200, h);   // this tier (or a higher one) is already bought
+      } else if (hasAccess(paid) && paid.until - Date.now() > 10 * 86400000) return json({ ok: true, paid: true, until: paid.until }, 200, h);   // already paid, renewal opens 10 days before the end
+      let inv = prov === "cryptobot" ? await createInvoiceCryptoBot(env, user, offer) : prov === "2328" ? await createInvoice2328(env, user, offer) : await createInvoice(env, user, offer);
       if (inv.error && prov !== "cryptobot" && env.CRYPTOBOT_TOKEN) {   // main provider down: fall back to Crypto Bot instead of a dead end
         await dbg(env, { pay: "FALLBACK to cryptobot: " + String(inv.error).slice(0, 60) });
-        const fb = await createInvoiceCryptoBot(env, user);
+        const fb = await createInvoiceCryptoBot(env, user, offer);
         if (!fb.error) inv = fb;
       }
       if (inv.error) { await dbg(env, { pay: "CREATE FAIL " + String(inv.error).slice(0, 60) }); return json({ ok: false, error: "invoice failed" }, 502, h); }

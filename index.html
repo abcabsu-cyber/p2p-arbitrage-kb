@@ -1319,7 +1319,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 19.10 design32</div>
+        <div class="pf-build" id="pfBuild">сборка 19.10 design33</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5518,7 +5518,55 @@
     if(chips) chips.addEventListener("click", function(e){ var b=e.target.closest(".cs-chip"); if(!b) return; var i=+b.getAttribute("data-m"); if(i===mod) return; mod=i; haptic("selection");
       Array.prototype.forEach.call(chips.children, function(x,k){ x.classList.toggle("on",k===i); }); document.getElementById("csMod").innerHTML=modHtml(i);
       b.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); });
-    buy.addEventListener("click", function(){ haptic("impact-light"); toast("Оплата обучения откроется скоро"); });
+    // ---- payment: same providers and flow as the private channel; owned tier -> join its channel
+    var RANK={eco:1,std:2,pro:3}, owned=null, poll=null, busy=false;
+    var note=box.querySelector(".pv-cta .pv-cta-note");
+    function stop(){ if(poll){ clearInterval(poll); poll=null; } }
+    window.__payClean=function(){ stop(); };
+    function applyOwned(ci){
+      owned=ci||null; if(!owned) { setSel(sel); return; }
+      var t=T.items[sel]; buy.textContent = (t && RANK[t.id]>RANK[owned.tier]) ? "Перейти на "+t.name+" за "+t.price : "Подать заявку в канал «"+(owned.name||"")+"»";
+      if(note) note.textContent="Доступ навсегда · заявку одобрим "+(c.start||"1 декабря")+" автоматически";
+    }
+    function status(){ return pvApi("/api/status",{product:"course"}).then(function(j){ if(j && j.ok && j.course){ applyOwned(j.course); return j.course; } return null; }).catch(function(){ return null; }); }
+    var _setSel=setSel; setSel=function(i){ _setSel(i); if(owned) applyOwned(owned); };
+    status();
+    function watch(tier){ stop(); var n=0; poll=setInterval(function(){ if(++n>150 || !buy.isConnected){ stop(); return; }
+      status().then(function(ci){ if(ci && RANK[ci.tier]>=RANK[tier]){ stop(); haptic("success"); toast("Оплата получена, обучение открыто"); } }); }, 4000); }
+    function pay(method){
+      var t=T.items[sel]; if(!t || busy) return; busy=true; buy.style.opacity=".6";
+      pvApi("/api/pay/create", {product:"course", tier:t.id, method:method}).then(function(j){
+        if(j && j.ok && j.paid){ status(); return; }
+        if(j && j._s===429) throw new Error("429");
+        if(!j || !j.ok || !j.url) throw new Error("fail");
+        try{ if(j.tg && tg.openTelegramLink) tg.openTelegramLink(j.url); else tg.openLink(j.url); }catch(e){ window.open(j.url,"_blank"); }
+        watch(t.id);
+      }).catch(function(e){ toast(e && e.message==="no-tg" ? "Откройте приложение в Telegram, чтобы оплатить" : e && e.message==="429" ? "Слишком много попыток. Подождите минуту" : e && e.message==="timeout" ? "Нет ответа от сервера. Проверьте интернет и повторите" : "Не удалось создать счёт. Попробуйте ещё раз"); })
+        .then(function(){ busy=false; buy.style.opacity=""; });
+    }
+    function sheet(){
+      if(document.getElementById("paySheet")) return; var t=T.items[sel];
+      var sh=document.createElement("div"); sh.className="psheet"; sh.id="paySheet";
+      sh.innerHTML='<div class="psheet-bg"></div><div class="psheet-box"><div class="psheet-grab"></div><div class="psheet-t">Способ оплаты</div><div class="psheet-s">Обучение «'+esc(t.name)+'» · '+esc(t.price)+'</div>'+
+        '<button class="pay-opt" data-k="crypto"><span class="po-ic">₿</span><span class="po-t">Криптой<small>USDT и другая крипта</small></span></button>'+
+        '<button class="pay-opt off" data-k="sbp"><span class="po-ic">🏦</span><span class="po-t">Картой или СБП<small>Банковская карта, СБП</small></span><span class="po-soon">Скоро</span></button>'+
+        '<button class="pay-opt" data-k="cryptobot"><span class="po-ic">🤖</span><span class="po-t">Crypto Bot<small>Оплата в Telegram</small></span></button></div>';
+      document.body.appendChild(sh);
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.classList.add("on"); }); });
+      function close(){ sh.classList.remove("on"); setTimeout(function(){ if(sh.parentNode) sh.parentNode.removeChild(sh); },260); }
+      sh.querySelector(".psheet-bg").addEventListener("click", close);
+      sh.addEventListener("click", function(e){ var b=e.target.closest(".pay-opt"); if(!b) return; haptic("impact-light");
+        if(b.classList.contains("off")){ toast("Скоро будет доступно"); return; }
+        close(); pay(b.getAttribute("data-k")==="cryptobot" ? "cryptobot" : undefined); });
+    }
+    buy.addEventListener("click", function(){
+      haptic("impact-light");
+      if(owned){ var t=T.items[sel];
+        if(t && RANK[t.id]>RANK[owned.tier] && c.payCrypto){ sheet(); return; }   // upgrade to a higher tier
+        if(owned.join) pvOpen(owned.join); else toast("Ссылка на канал появится скоро. Мы напишем вам"); return; }
+      if(!c.payCrypto){ toast("Оплата обучения откроется скоро"); return; }
+      sheet();
+    });
     (function(){ var ct=box.querySelector(".pv-cta"), pv=box.querySelector(".pv"); function m(){ if(ct&&pv&&ct.offsetHeight) pv.style.setProperty("--pvcta", ct.offsetHeight+"px"); } m(); setTimeout(m,300); })();
   }
   function renderPrivate(box){
