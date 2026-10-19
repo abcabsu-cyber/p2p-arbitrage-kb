@@ -1344,7 +1344,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 20.10 design36</div>
+        <div class="pf-build" id="pfBuild">сборка 20.10 design37</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5543,11 +5543,11 @@
       var lock=-1, tmr=0;
       function nearest(){ var rr=rail.getBoundingClientRect(), mid=rr.left+rr.width/2, best=sel, bd=1e9;
         for(var i=0;i<rail.children.length;i++){ var cr=rail.children[i].getBoundingClientRect(), dd=Math.abs(cr.left+cr.width/2-mid); if(dd<bd){ bd=dd; best=i; } } return best; }
-      function settle(){ var n=nearest(); if(lock>=0){ if(n===lock) lock=-1; return; } if(n!==sel){ haptic("selection"); setSel(n); } }
+      function settle(){ var n=nearest(); if(lock>=0){ if(n===lock) lock=-1; return; } if(n!==hlCur) haptic("selection"); if(n!==sel) setSel(n); else hl(n); }
       // highlight follows the card crossing the centre right away; price/haptic still wait for the settle
       var raf=0;
       rail.addEventListener("scroll", function(){ clearTimeout(tmr); tmr=setTimeout(settle,110);
-        if(lock<0 && !raf) raf=requestAnimationFrame(function(){ raf=0; if(lock<0) hl(nearest()); }); }, {passive:true});
+        if(lock<0 && !raf) raf=requestAnimationFrame(function(){ raf=0; if(lock<0){ var n=nearest(); if(n!==hlCur){ haptic("selection"); hl(n); } } }); }, {passive:true});
       rail.addEventListener("touchstart", function(){ lock=-1; }, {passive:true});
       rail.addEventListener("click", function(e){ var el=e.target.closest(".cs-tar"); if(!el) return; var i=+el.getAttribute("data-i"); if(i===sel) return; lock=i; haptic("selection"); setSel(i); el.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); setTimeout(function(){ lock=-1; },900); });
     }
