@@ -1374,7 +1374,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 20.10 design46</div>
+        <div class="pf-build" id="pfBuild">сборка 20.10 design47</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5544,8 +5544,10 @@
       '<div class="cs-chips" id="csChips">'+P.modules.map(function(m,i){ return '<button class="cs-chip'+(i===0?' on':'')+'" data-m="'+i+'">'+esc(m.name)+'</button>'; }).join("")+'</div>'+
       '<div id="csMod">'+modHtml(0)+'</div>' : '';
     var R=c.reviews;
+    var RI=(R&&R.items&&R.items.length)?R.items:null;
     var rev = R ? '<div class="pv-rev cs-rev"><div class="pv-rev-hd"><span>'+esc(R.eyebrow||"Отзывы")+'</span><h3>'+esc(R.title||"")+'</h3></div>'+
-      '<div class="pv-rail" id="csRev">'+((R.items&&R.items.length)?R.items:[0,0,0]).map(function(x){ return x ? '<figure class="pv-card"><img src="'+esc(x)+'" alt="Отзыв" loading="lazy"></figure>' : '<figure class="cs-ph"><span>Отзыв появится здесь</span></figure>'; }).join("")+'</div></div>' : '';
+      '<div class="pv-rail" id="csRev" tabindex="0" role="region" aria-label="Отзывы учеников">'+(RI?RI:[0,0,0]).map(function(x,i){ var dm=String(x).match(/#(\d+)x(\d+)$/); return x ? '<figure class="pv-card"><img src="'+esc(x)+'"'+(dm?' width="'+dm[1]+'" height="'+dm[2]+'"':'')+' alt="Отзыв ученика '+(i+1)+' из '+RI.length+'" role="button" tabindex="0" loading="lazy" decoding="async"></figure>' : '<figure class="cs-ph"><span>Отзыв появится здесь</span></figure>'; }).join("")+'</div>'+
+      (RI&&RI.length>1?'<div class="pv-dots" id="csRevDots">'+RI.map(function(_,i){ return '<i'+(i===0?' class="on"':'')+'></i>'; }).join("")+'</div>':'')+'</div>' : '';
     var CKS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 12.5l3.2 3.2L17 9"/></svg>';
     var SEAT='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="8" r="3.6"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6z"/><circle cx="17.2" cy="9" r="2.8"/><path d="M17 14.2c2.7 0 4.5 1.9 4.5 4.8h-4.4c0-1.8-.5-3.4-1.6-4.4.4-.3.9-.4 1.5-.4z"/></svg>';
     function tarBody(t){
@@ -5565,6 +5567,13 @@
       sec("Что входит", c.includeTitle||"Что входит")+inc+exch+prog+rev+tar+guar+'</div>'+
       '<div class="pv-cta"><button class="buy-btn" id="csBuy"></button>'+(c.ctaNote?'<div class="pv-cta-note">'+esc(c.ctaNote)+'</div>':'')+'</div>';
     var buy=document.getElementById("csBuy");
+    (function(){ var rr=document.getElementById("csRev"), dd=document.getElementById("csRevDots"); if(!rr||!RI) return;
+      if(dd) rr.addEventListener("scroll", function(){ var cards=rr.children, best=0, bd=1e9, b=rr.getBoundingClientRect(), mid=b.left+b.width/2;
+        for(var i=0;i<cards.length;i++){ var cb=cards[i].getBoundingClientRect(), x=Math.abs(cb.left+cb.width/2-mid); if(x<bd){ bd=x; best=i; } }
+        for(var k=0;k<dd.children.length;k++) dd.children[k].classList.toggle("on",k===best); }, {passive:true});
+      rr.addEventListener("click", function(e){ var im=e.target.closest("img"); if(im) openLightbox(im.getAttribute("src"), im.getAttribute("alt")); });
+      rr.addEventListener("keydown", function(e){ if((e.key==="Enter"||e.key===" ") && e.target.matches && e.target.matches("img")){ e.preventDefault(); e.target.click(); } });
+    })();
     // preview clips never stop: loop, restart if the system pauses them, play only while visible
     (function(){ var vs=box.querySelectorAll(".cs-media video"); if(!vs.length) return;
       function go(v){ try{ v.muted=true; var r=v.play(); if(r&&r.catch) r.catch(function(){}); }catch(e){} }
