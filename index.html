@@ -622,7 +622,10 @@
   .pv-price small{font:400 14px 'Inter',sans-serif;color:rgba(255,255,255,.6);margin-left:5px;}
   .pv-start{font:600 12px 'Inter',sans-serif;color:#1c1c1e;background:#f6c445;border-radius:999px;padding:6px 11px;white-space:nowrap;}
   .pv-sec{margin:28px 2px 0;}
-  .cs-media{margin-top:4px;}
+  .cs-media{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin:4px -16px 0;padding:0 16px 2px;scroll-padding-left:16px;scrollbar-width:none;overscroll-behavior-x:contain;}
+  .cs-media::-webkit-scrollbar{display:none;}
+  .cs-mi{flex:none;width:78%;max-width:340px;aspect-ratio:3/2;border-radius:var(--radius-lg);background:var(--fill);overflow:hidden;scroll-snap-align:start;}
+  .cs-mi video,.cs-mi img{display:block;width:100%;height:100%;object-fit:cover;}
   .cs-main{aspect-ratio:3/2;border-radius:var(--radius-lg);background:var(--fill);}
   .cs-thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;}
   .cs-thumbs div{aspect-ratio:3/2;border-radius:12px;background:var(--fill);}
@@ -1365,7 +1368,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 20.10 design43</div>
+        <div class="pf-build" id="pfBuild">сборка 20.10 design44</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5520,7 +5523,8 @@
     function sec(e,t){ return '<div class="pv-sec"><span>'+esc(e)+'</span><h3>'+esc(t)+'</h3></div>'; }
     var T=c.tariffs||{items:[]}, sel=Math.min(T.default||0, T.items.length-1), mod=0, P=c.program||{modules:[]};
     function mEl(x){ if(!x) return ''; return /\.(mp4|webm)(\?|#|$)/i.test(x) ? '<video src="'+esc(x)+'" autoplay muted loop playsinline preload="auto" disablepictureinpicture></video>' : '<img src="'+esc(x)+'" alt="" loading="lazy">'; }
-    var media = c.media ? '<div class="cs-media"><div class="cs-main">'+mEl(c.media.main)+'</div><div class="cs-thumbs" style="grid-template-columns:repeat('+Math.max(1,(c.media.thumbs||[]).length)+',1fr)">'+(c.media.thumbs||[]).map(function(x){ return '<div>'+mEl(x)+'</div>'; }).join("")+'</div></div>' : '';
+    var mlist = c.media ? [c.media.main].concat(c.media.thumbs||[]) : [];
+    var media = c.media ? '<div class="cs-media" id="csMedia">'+mlist.map(function(x){ return '<div class="cs-mi">'+mEl(x)+'</div>'; }).join("")+'</div>' : '';
     var inc = '<div class="pv-list">'+(c.include||[]).map(function(b){ return '<div class="pv-row"><span class="cs-ck">'+CK+'</span><span class="pv-tx"><b>'+esc(b.t)+'</b>'+(b.d?'<small>'+esc(b.d)+'</small>':'')+'</span></div>'; }).join("")+'</div>';
     function tierTxt(t){ return !t||t.length>=3 ? "Во всех тарифах" : t.length===1 ? "Только "+t[0] : t.join(" и "); }
     var LET="АБВГДЕЖЗИК";
