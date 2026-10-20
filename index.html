@@ -1363,7 +1363,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 20.10 design40</div>
+        <div class="pf-build" id="pfBuild">сборка 20.10 design41</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5517,7 +5517,7 @@
     var LOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
     function sec(e,t){ return '<div class="pv-sec"><span>'+esc(e)+'</span><h3>'+esc(t)+'</h3></div>'; }
     var T=c.tariffs||{items:[]}, sel=Math.min(T.default||0, T.items.length-1), mod=0, P=c.program||{modules:[]};
-    var media = c.media ? '<div class="cs-media"><div class="cs-main"></div><div class="cs-thumbs">'+(c.media.thumbs||[]).map(function(){ return '<div></div>'; }).join("")+'</div></div>' : '';
+    var media = c.media && c.media.main ? '<div class="cs-media"><div class="cs-main"></div><div class="cs-thumbs">'+(c.media.thumbs||[]).map(function(){ return '<div></div>'; }).join("")+'</div></div>' : '';
     var inc = '<div class="pv-list">'+(c.include||[]).map(function(b){ return '<div class="pv-row"><span class="cs-ck">'+CK+'</span><span class="pv-tx"><b>'+esc(b.t)+'</b>'+(b.d?'<small>'+esc(b.d)+'</small>':'')+'</span></div>'; }).join("")+'</div>';
     function tierTxt(t){ return !t||t.length>=3 ? "Во всех тарифах" : t.length===1 ? "Только "+t[0] : t.join(" и "); }
     var LET="АБВГДЕЖЗИК";
@@ -5560,7 +5560,12 @@
     setSel(sel);
     var rail=document.getElementById("csTars");
     if(rail){
-      var card=rail.children[sel]; if(card) rail.scrollLeft = card.offsetLeft - (rail.clientWidth-card.offsetWidth)/2;
+      // the default tariff is centred until the person touches the rail; the tab may be hidden when rendered (width 0), so re-centre on every resize
+      var touched=false;
+      function centerSel(){ if(touched||!rail.clientWidth) return; var cd=rail.children[sel]; if(cd) rail.scrollLeft = cd.offsetLeft - (rail.clientWidth-cd.offsetWidth)/2; }
+      centerSel();
+      if(typeof ResizeObserver!=="undefined"){ try{ new ResizeObserver(centerSel).observe(rail); }catch(e){} }
+      setTimeout(centerSel,60); setTimeout(centerSel,400);
       // pick the tariff only when the swipe has settled: no flicker of the price while cards pass by
       var lock=-1, tmr=0;
       function nearest(){ var rr=rail.getBoundingClientRect(), mid=rr.left+rr.width/2, best=sel, bd=1e9;
@@ -5568,10 +5573,14 @@
       function settle(){ var n=nearest(); if(lock>=0){ if(n===lock) lock=-1; return; } if(n!==hlCur) haptic("selection"); if(n!==sel) setSel(n); else hl(n); }
       // highlight follows the card crossing the centre right away; price/haptic still wait for the settle
       var raf=0;
-      rail.addEventListener("scroll", function(){ clearTimeout(tmr); tmr=setTimeout(settle,110);
+      rail.addEventListener("scroll", function(){ if(!touched && lock<0) return;   // programmatic/initial positioning must never change the choice
+        clearTimeout(tmr); tmr=setTimeout(settle,110);
         if(lock<0 && !raf) raf=requestAnimationFrame(function(){ raf=0; if(lock<0){ var n=nearest(); if(n!==hlCur){ haptic("selection"); hl(n); } } }); }, {passive:true});
-      rail.addEventListener("touchstart", function(){ lock=-1; }, {passive:true});
-      rail.addEventListener("click", function(e){ var el=e.target.closest(".cs-tar"); if(!el) return; var i=+el.getAttribute("data-i"); if(i===sel) return; lock=i; haptic("selection"); setSel(i); el.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); setTimeout(function(){ lock=-1; },900); });
+      function userGo(){ touched=true; lock=-1; }
+      rail.addEventListener("touchstart", userGo, {passive:true});
+      rail.addEventListener("pointerdown", userGo, {passive:true});
+      rail.addEventListener("wheel", userGo, {passive:true});
+      rail.addEventListener("click", function(e){ var el=e.target.closest(".cs-tar"); if(!el) return; var i=+el.getAttribute("data-i"); if(i===sel) return; touched=true; lock=i; haptic("selection"); setSel(i); el.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); setTimeout(function(){ lock=-1; },900); });
     }
     var chips=document.getElementById("csChips");
     if(chips) chips.addEventListener("click", function(e){ var b=e.target.closest(".cs-chip"); if(!b) return; var i=+b.getAttribute("data-m"); if(i===mod) return; mod=i; haptic("selection");
