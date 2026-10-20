@@ -958,6 +958,9 @@
   .lightbox.in{opacity:1;}
   .lb-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:center;touch-action:pan-x pan-y pinch-zoom;padding:60px 0;}
   .lb-scroll img{flex:none;margin:0 auto;width:auto;height:auto;max-width:none;min-width:100%;max-height:none;border-radius:6px;background:#fff;}
+  /* отзыв на весь экран: по ширине экрана, без увеличения; длинный листается вниз */
+  .lb-fit .lb-scroll{padding:calc(env(safe-area-inset-top,0px) + 64px) 14px 40px;}
+  .lb-fit .lb-scroll img{width:100%;min-width:0;max-width:560px;margin:auto;background:none;border-radius:0;}
   .lb-close{position:absolute;top:calc(env(safe-area-inset-top,0px) + 56px);right:14px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;}
   .lb-close svg{width:20px;height:20px;}
   .md code{font:500 14px ui-monospace,Menlo,monospace;background:var(--fill);padding:2px 6px;border-radius:5px;}
@@ -1103,8 +1106,8 @@
   .cs-ex figcaption{margin-top:6px;text-align:center;font-size:12px;font-weight:500;color:var(--fg-secondary);}
   /* отзывы курса: компактные карточки, длинные обрезаются с затуханием */
   .cs-rev .pv-rail{align-items:flex-start;padding:0 calc((100% - min(68vw,268px))/2) 4px;}
-  .cs-rev .pv-card{width:min(68vw,268px)!important;position:relative;overflow:hidden!important;max-height:236px;cursor:pointer;border-radius:16px!important;}
-  .cs-rev .pv-card img{width:100%;height:auto;}
+  .cs-rev .pv-card{display:block!important;width:min(68vw,268px)!important;position:relative;overflow:hidden!important;max-height:236px;cursor:pointer;border-radius:16px!important;}
+  .cs-rev .pv-card img{display:block;width:100%;height:auto;margin:0;}
   .cs-rev .pv-card.cut::after{content:"";position:absolute;left:0;right:0;bottom:0;height:96px;background:linear-gradient(to bottom,transparent,var(--elevated) 82%);pointer-events:none;}
   .cs-rev .pv-card.cut::before{content:"Читать полностью";position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:1;font:500 12px 'Inter',sans-serif;color:var(--fg);background:var(--fill);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:6px 12px;border-radius:999px;white-space:nowrap;pointer-events:none;}
   /* воздух между смысловыми блоками Привата и Обучения */
@@ -1380,7 +1383,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 20.10 design48</div>
+        <div class="pf-build" id="pfBuild">сборка 20.10 design49</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5239,10 +5242,10 @@
     readDone=false; readBar.firstChild.style.width="0"; readBar.classList.add("on");
   }
   function hideReadProgress(){ if(readBar) readBar.classList.remove("on"); }
-  function openLightbox(src, alt){
+  function openLightbox(src, alt, fit){
     var opener = document.activeElement;
     var box = document.createElement("div");
-    box.className = "lightbox";
+    box.className = "lightbox"+(fit?" lb-fit":"");
     box.setAttribute("role","dialog"); box.setAttribute("aria-modal","true"); box.setAttribute("aria-label","Просмотр изображения");
     var sc = document.createElement("div"); sc.className = "lb-scroll";
     var im = document.createElement("img"); im.alt = alt || ""; im.src = src;   // DOM, not string concatenation: the address can never break out of the attribute
@@ -5577,7 +5580,7 @@
       if(dd) rr.addEventListener("scroll", function(){ var cards=rr.children, best=0, bd=1e9, b=rr.getBoundingClientRect(), mid=b.left+b.width/2;
         for(var i=0;i<cards.length;i++){ var cb=cards[i].getBoundingClientRect(), x=Math.abs(cb.left+cb.width/2-mid); if(x<bd){ bd=x; best=i; } }
         for(var k=0;k<dd.children.length;k++) dd.children[k].classList.toggle("on",k===best); }, {passive:true});
-      rr.addEventListener("click", function(e){ var cd=e.target.closest(".pv-card"), im=cd&&cd.querySelector("img"); if(im) openLightbox(im.getAttribute("src"), im.getAttribute("alt")); });
+      rr.addEventListener("click", function(e){ var cd=e.target.closest(".pv-card"), im=cd&&cd.querySelector("img"); if(im) openLightbox(im.getAttribute("src"), im.getAttribute("alt"), true); });
       function cut(){ Array.prototype.forEach.call(rr.querySelectorAll(".pv-card"), function(cd){ var im=cd.querySelector("img"); if(!im||!cd.clientWidth) return; var w=+im.getAttribute("width"), h=+im.getAttribute("height"), ih=(w&&h)?cd.clientWidth*h/w:im.offsetHeight; cd.classList.toggle("cut", ih>240); }); }
       cut(); setTimeout(cut,200); if(typeof ResizeObserver!=="undefined"){ try{ new ResizeObserver(cut).observe(rr); }catch(x){} }
       rr.addEventListener("keydown", function(e){ if((e.key==="Enter"||e.key===" ") && e.target.matches && e.target.matches("img")){ e.preventDefault(); e.target.click(); } });
