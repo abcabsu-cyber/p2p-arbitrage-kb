@@ -654,6 +654,13 @@ async function handleContent(env, req, url) {
   if (e.status) return new Response("not found", { status: e.status, headers: h });
   const hd = { ...h, "content-type": e.type, etag: e.tag, "cache-control": isImg ? "private, max-age=86400" : "private, no-cache" };
   if (req.headers.get("if-none-match") === e.tag) return new Response(null, { status: 304, headers: hd });
+  hd["accept-ranges"] = "bytes";
+  const rg = ext === "mp4" && /^bytes=(\d*)-(\d*)$/.exec(req.headers.get("range") || "");   // iOS needs byte ranges to play video
+  if (rg && req.method !== "HEAD") {
+    const n = e.buf.byteLength; let a0 = rg[1] === "" ? Math.max(0, n - Number(rg[2])) : Number(rg[1]); let b0 = rg[1] === "" || rg[2] === "" ? n - 1 : Math.min(Number(rg[2]), n - 1);
+    if (!(a0 <= b0 && a0 < n)) return new Response(null, { status: 416, headers: { ...hd, "content-range": "bytes */" + n } });
+    return new Response(e.buf.slice(a0, b0 + 1), { status: 206, headers: { ...hd, "content-range": `bytes ${a0}-${b0}/${n}`, "content-length": String(b0 - a0 + 1) } });
+  }
   return new Response(req.method === "HEAD" ? null : e.buf, { headers: hd });
 }
 // cached read of one file (memory cache in front of GitHub / telegra.ph)
