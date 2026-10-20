@@ -42,9 +42,9 @@ const CFG = {
   PAY_AMOUNT: "4990",
   // course tiers: price in RUB, rank for "this tier or higher", env names of the tier channel and its invite link
   COURSE: {
-    eco: { name: "Эконом", amount: "9990", rank: 1 },
-    std: { name: "Стандарт", amount: "24990", rank: 2 },
-    pro: { name: "Премиум", amount: "44990", rank: 3 },
+    eco: { name: "Базовый", amount: "9990", rank: 1 },
+    std: { name: "Премиум", amount: "24990", rank: 2 },
+    pro: { name: "VIP", amount: "44990", rank: 3 },
   },
   COURSE_START: Date.UTC(2026, 11, 1), // course channels accept members from this day (same as the private channel)
   PAY_CURRENCY: "RUB",

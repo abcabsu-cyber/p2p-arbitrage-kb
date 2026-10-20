@@ -1090,6 +1090,8 @@
   .cs-sub i{display:flex;align-items:center;gap:9px;background:none;border-radius:0;padding:8px 0;font-size:13px;font-weight:500;line-height:1.3;color:var(--fg-secondary);}
   .cs-sub i + i{border-top:1px solid var(--separator);}
   .cs-sub i::before{content:"";flex:none;width:5px;height:5px;border-radius:50%;background:var(--fg-tertiary);}
+  .cs-tar-hd em.lim{display:inline-flex;align-items:center;gap:5px;background:#f6c445;color:#3a2a00;}
+  .cs-tar-hd em.lim svg{width:12px;height:12px;flex:none;}
   /* карусель бирж */
   .cs-exsub{margin:4px 2px 0;font-size:13.5px;line-height:1.42;color:var(--fg-secondary);}
   .cs-ex{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin:14px -16px 0;padding:0 16px 2px;scrollbar-width:none;overscroll-behavior-x:contain;}
@@ -1361,7 +1363,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 20.10 design38</div>
+        <div class="pf-build" id="pfBuild">сборка 20.10 design39</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5532,13 +5534,14 @@
     var rev = R ? '<div class="pv-rev cs-rev"><div class="pv-rev-hd"><span>'+esc(R.eyebrow||"Отзывы")+'</span><h3>'+esc(R.title||"")+'</h3></div>'+
       '<div class="pv-rail" id="csRev">'+((R.items&&R.items.length)?R.items:[0,0,0]).map(function(x){ return x ? '<figure class="pv-card"><img src="'+esc(x)+'" alt="Отзыв" loading="lazy"></figure>' : '<figure class="cs-ph"><span>Отзыв появится здесь</span></figure>'; }).join("")+'</div></div>' : '';
     var CKS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 12.5l3.2 3.2L17 9"/></svg>';
+    var SEAT='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="8" r="3.6"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6z"/><circle cx="17.2" cy="9" r="2.8"/><path d="M17 14.2c2.7 0 4.5 1.9 4.5 4.8h-4.4c0-1.8-.5-3.4-1.6-4.4.4-.3.9-.4 1.5-.4z"/></svg>';
     function tarBody(t){
       if(t.groups) return t.groups.map(function(g){ return '<div class="cs-tg">'+esc(g.label)+'</div><ul>'+g.items.map(function(f){ return '<li><span>'+CKS+'</span>'+esc(f)+'</li>'; }).join("")+'</ul>'; }).join("");
       return '<ul>'+(t.features||[]).map(function(f){ return '<li><span>'+CKS+'</span>'+esc(f)+'</li>'; }).join("")+'</ul>';
     }
     var tar = T.items.length ? '<div class="cs-tblock">'+sec(T.eyebrow||"Тарифы", T.title||"")+
       '<div class="cs-tars" id="csTars">'+T.items.map(function(t,i){ return '<div class="cs-tar'+(t.popular?' pop':'')+'" data-i="'+i+'">'+
-        '<div class="cs-tar-hd"><b>'+esc(t.name)+'</b>'+(t.popular?'<em>Популярный</em>':'')+'</div>'+
+        '<div class="cs-tar-hd"><b>'+esc(t.name)+'</b>'+(t.popular?'<em>Популярный</em>':t.limited?'<em class="lim">'+SEAT+esc(t.limited)+'</em>':'')+'</div>'+
         (T.flow?'<div class="cs-flow">'+esc(T.flow)+'</div>':'')+
         '<div class="cs-price"><b>'+esc(t.price)+'</b>'+(t.old?'<s>'+esc(t.old)+'</s>':'')+'</div>'+
         '<div class="cs-tline"></div>'+tarBody(t)+'</div>'; }).join("")+'</div>'+
