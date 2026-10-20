@@ -1119,6 +1119,7 @@
   .cs-tblock{margin-top:0;min-height:0;justify-content:flex-start;}
   .pv-stats{margin-top:32px;}
   .cs-chips{margin-top:16px;}
+  #csMod .cs-lessons{margin-top:14px;gap:10px;}
   .pv-lead{margin:14px 2px 6px;}
   .pv-price b{font-weight:600;}.pv-stats b{font-weight:600;}.pv-auth-hd b,.pv-step-hd b,.pv-next b{font-weight:600;}
   .pv-sec h3,.pv-hero h2{font-weight:600;}
@@ -1384,7 +1385,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 20.10 design51</div>
+        <div class="pf-build" id="pfBuild">сборка 20.10 design52</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5546,7 +5547,7 @@
     var LET="АБВГДЕЖЗИК";
     function modHtml(i){ var m=P.modules[i]; if(!m) return '';
       var hd=(m.bonus?'Бонус':'Модуль '+(i+1))+' · '+tierTxt(m.tiers);
-      return '<div class="cs-mtier">'+esc(hd)+'</div><div class="cs-lessons">'+m.items.map(function(t,j){ var o=typeof t==="string"?{t:t}:t;
+      return '<div class="cs-lessons">'+m.items.map(function(t,j){ var o=typeof t==="string"?{t:t}:t;
         return '<div class="cs-les"><span class="cs-n">'+LET.charAt(j)+'</span><span class="cs-lt">'+esc(o.t)+(o.sub?'<span class="cs-sub">'+o.sub.map(function(x){ return '<i>'+esc(x)+'</i>'; }).join("")+'</span>':'')+'</span><span class="cs-lock">'+LOCK+'</span></div>'; }).join("")+'</div>'; }
     var X=c.exchanges, exch = X&&X.items&&X.items.length ? '<div class="pv-sec"><h3>'+esc(X.title)+'</h3>'+(X.sub?'<p class="cs-exsub">'+esc(X.sub)+'</p>':'')+'</div>'+
       '<div class="cs-ex">'+X.items.map(function(x){ return '<figure><img src="'+esc(x.img)+'" alt="'+esc(x.name)+'" width="112" height="70" loading="lazy"><figcaption>'+esc(x.name)+'</figcaption></figure>'; }).join("")+'</div>' : '';
