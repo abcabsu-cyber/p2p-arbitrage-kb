@@ -1080,6 +1080,23 @@
   .cs-price s{font-size:12.5px;}
   .cs-tar li{font-size:13.5px;line-height:1.35;}
   .cs-flow,.cs-hint{font-size:12px;}
+  /* тарифы: плоский список с простыми галочками, как в референсе */
+  .cs-tar ul{gap:11px;margin-top:14px;}
+  .cs-tar li{font-size:14.5px;font-weight:400;line-height:1.32;gap:10px;}
+  .cs-tar li span{background:none;width:18px;height:18px;margin-top:1px;opacity:.85;}
+  .cs-tar li span svg{width:18px;height:18px;}
+  /* критерии связок: аккуратный список под заголовком */
+  .cs-sub{display:flex;flex-direction:column;gap:0;margin-top:10px;padding:2px 12px;background:var(--fill);border-radius:12px;}
+  .cs-sub i{display:flex;align-items:center;gap:9px;background:none;border-radius:0;padding:8px 0;font-size:13px;font-weight:500;line-height:1.3;color:var(--fg-secondary);}
+  .cs-sub i + i{border-top:1px solid var(--separator);}
+  .cs-sub i::before{content:"";flex:none;width:5px;height:5px;border-radius:50%;background:var(--fg-tertiary);}
+  /* карусель бирж */
+  .cs-exsub{margin:4px 2px 0;font-size:13.5px;line-height:1.42;color:var(--fg-secondary);}
+  .cs-ex{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin:14px -16px 0;padding:0 16px 2px;scrollbar-width:none;overscroll-behavior-x:contain;}
+  .cs-ex::-webkit-scrollbar{display:none;}
+  .cs-ex figure{flex:none;width:112px;margin:0;scroll-snap-align:start;}
+  .cs-ex img{display:block;width:112px;height:70px;object-fit:cover;border-radius:14px;box-shadow:inset 0 0 0 1px rgba(128,126,125,.18);background:var(--fill);}
+  .cs-ex figcaption{margin-top:6px;text-align:center;font-size:12px;font-weight:500;color:var(--fg-secondary);}
   .pv-price b{font-weight:600;}.pv-stats b{font-weight:600;}.pv-auth-hd b,.pv-step-hd b,.pv-next b{font-weight:600;}
   .pv-sec h3,.pv-hero h2{font-weight:600;}
   .buy-btn{height:48px;font-size:15px;}
@@ -1344,7 +1361,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 20.10 design37</div>
+        <div class="pf-build" id="pfBuild">сборка 20.10 design38</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5506,6 +5523,8 @@
       var hd=(m.bonus?'Бонус':'Модуль '+(i+1))+' · '+tierTxt(m.tiers);
       return '<div class="cs-mtier">'+esc(hd)+'</div><div class="cs-lessons">'+m.items.map(function(t,j){ var o=typeof t==="string"?{t:t}:t;
         return '<div class="cs-les"><span class="cs-n">'+LET.charAt(j)+'</span><span class="cs-lt">'+esc(o.t)+(o.sub?'<span class="cs-sub">'+o.sub.map(function(x){ return '<i>'+esc(x)+'</i>'; }).join("")+'</span>':'')+'</span><span class="cs-lock">'+LOCK+'</span></div>'; }).join("")+'</div>'; }
+    var X=c.exchanges, exch = X&&X.items&&X.items.length ? '<div class="pv-sec"><h3>'+esc(X.title)+'</h3>'+(X.sub?'<p class="cs-exsub">'+esc(X.sub)+'</p>':'')+'</div>'+
+      '<div class="cs-ex">'+X.items.map(function(x){ return '<figure><img src="'+esc(x.img)+'" alt="'+esc(x.name)+'" width="112" height="70" loading="lazy"><figcaption>'+esc(x.name)+'</figcaption></figure>'; }).join("")+'</div>' : '';
     var prog = P.modules.length ? sec(P.eyebrow||"Программа", P.title||"")+
       '<div class="cs-chips" id="csChips">'+P.modules.map(function(m,i){ return '<button class="cs-chip'+(i===0?' on':'')+'" data-m="'+i+'">'+esc(m.name)+'</button>'; }).join("")+'</div>'+
       '<div id="csMod">'+modHtml(0)+'</div>' : '';
@@ -5527,7 +5546,7 @@
     var G=c.guarantee, guar = G ? '<div class="cs-guar"><span>'+esc(G.eyebrow)+'</span><h3>'+esc(G.title)+'</h3><p>'+esc(G.text)+'</p></div>' : '';
     box.innerHTML = '<div class="pv cs">'+media+
       '<div class="cs-head">'+(c.eyebrow?'<span>'+esc(c.eyebrow)+'</span>':'')+'<h2>'+esc(c.headline||c.title||"")+'</h2>'+(c.lead?'<p>'+esc(c.lead)+'</p>':'')+'</div>'+
-      sec("Что входит", c.includeTitle||"Что входит")+inc+prog+rev+tar+guar+'</div>'+
+      sec("Что входит", c.includeTitle||"Что входит")+inc+exch+prog+rev+tar+guar+'</div>'+
       '<div class="pv-cta"><button class="buy-btn" id="csBuy"></button>'+(c.ctaNote?'<div class="pv-cta-note">'+esc(c.ctaNote)+'</div>':'')+'</div>';
     var buy=document.getElementById("csBuy");
     function setSel(i){ sel=i; var t=T.items[i]; if(t) buy.textContent="Купить "+t.name+" за "+t.price;
