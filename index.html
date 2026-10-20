@@ -1111,8 +1111,8 @@
   .cs-rev .pv-card img{display:block;width:100%;height:auto;margin:0;}
   .cs-rev .pv-card.cut::after{content:"";position:absolute;left:0;right:0;bottom:0;height:96px;background:linear-gradient(to bottom,transparent,var(--elevated) 82%);pointer-events:none;}
   .cs-rev .pv-card.cut::before{content:"Читать полностью";position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:1;font:500 12px 'Inter',sans-serif;color:var(--fg);background:var(--fill);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:6px 12px;border-radius:999px;white-space:nowrap;pointer-events:none;}
-  /* шапка Привата: золотой «билет» с отрывным корешком, без цены */
-  .pv-hero{position:relative;overflow:hidden;padding:22px 22px 0!important;border-radius:26px!important;color:#1c1c1e!important;background:linear-gradient(135deg,#ffe28f,#f6c445 55%,#e6a925)!important;box-shadow:none!important;}
+  /* шапка Привата: нежно-белый «билет» с отрывным корешком, без цены */
+  .pv-hero{position:relative;overflow:hidden;padding:22px 22px 0!important;border-radius:26px!important;color:#1c1c1e!important;background:var(--grad)!important;box-shadow:none!important;}
   .pv-hero .pv-tag{display:flex;align-items:center;gap:8px;color:rgba(28,28,30,.82)!important;font-size:10.5px;font-weight:600;letter-spacing:.09em;}
   .pv-hero .pv-tag::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:#1c1c1e;}
   .pv-hero h2{margin:14px 0 10px!important;font-size:clamp(17px,5vw,20px)!important;line-height:1.16!important;font-weight:600!important;letter-spacing:-.025em!important;color:#1c1c1e!important;-webkit-text-fill-color:#1c1c1e!important;background:none!important;}
@@ -1395,7 +1395,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 21.10 design57</div>
+        <div class="pf-build" id="pfBuild">сборка 21.10 design58</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
