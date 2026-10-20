@@ -1111,15 +1111,16 @@
   .cs-rev .pv-card img{display:block;width:100%;height:auto;margin:0;}
   .cs-rev .pv-card.cut::after{content:"";position:absolute;left:0;right:0;bottom:0;height:96px;background:linear-gradient(to bottom,transparent,var(--elevated) 82%);pointer-events:none;}
   .cs-rev .pv-card.cut::before{content:"Читать полностью";position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:1;font:500 12px 'Inter',sans-serif;color:var(--fg);background:var(--fill);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:6px 12px;border-radius:999px;white-space:nowrap;pointer-events:none;}
-  /* шапка Привата: editorial, без карточки, оранжевый акцент */
-  .pv-hero{padding:6px 2px 0!important;border-radius:0!important;background:none!important;box-shadow:none!important;color:var(--fg)!important;overflow:visible;}
-  .pv-hero .pv-tag{display:flex;align-items:center;gap:10px;color:var(--fg-tertiary)!important;font-size:10.5px;font-weight:500;letter-spacing:.12em;}
-  .pv-hero .pv-tag b{color:#ff8a1f;font-weight:600;letter-spacing:.06em;}
-  .pv-hero .pv-tag i{display:block;flex:none;width:40px;height:1px;background:#ff8a1f;}
-  .pv-hero h2{margin:16px 0 12px!important;font-size:clamp(19px,5.5vw,22px)!important;line-height:1.14!important;font-weight:600!important;letter-spacing:-.03em!important;color:var(--fg)!important;-webkit-text-fill-color:var(--fg)!important;background:none!important;text-wrap:balance;}
-  .pv-hero h2 .pv-hl{color:#ff8a1f;-webkit-text-fill-color:#ff8a1f;}
-  .pv-hero p{color:var(--fg-secondary)!important;font-size:12.5px;line-height:1.45;}
-  .pv-hero::after{content:"";display:block;height:1px;background:var(--separator);margin-top:22px;}
+  /* шапка Привата: золотой «билет» с отрывным корешком, без цены */
+  .pv-hero{position:relative;overflow:hidden;padding:22px 22px 0!important;border-radius:26px!important;color:#1c1c1e!important;background:linear-gradient(135deg,#ffe28f,#f6c445 55%,#e6a925)!important;box-shadow:none!important;}
+  .pv-hero .pv-tag{display:flex;align-items:center;gap:8px;color:rgba(28,28,30,.82)!important;font-size:10.5px;font-weight:600;letter-spacing:.09em;}
+  .pv-hero .pv-tag::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:#1c1c1e;}
+  .pv-hero h2{margin:14px 0 10px!important;font-size:clamp(17px,5vw,20px)!important;line-height:1.16!important;font-weight:600!important;letter-spacing:-.025em!important;color:#1c1c1e!important;-webkit-text-fill-color:#1c1c1e!important;background:none!important;}
+  .pv-hero p{color:rgba(28,28,30,.72)!important;font-size:12.5px;line-height:1.45;margin:0;}
+  .pv-hero .pv-stub{position:relative;margin:20px -22px 0;padding:16px 22px 20px;border-top:1.5px dashed rgba(28,28,30,.3);}
+  .pv-hero .pv-stub::before,.pv-hero .pv-stub::after{content:"";position:absolute;top:-13px;width:24px;height:24px;border-radius:50%;background:var(--canvas);}
+  .pv-hero .pv-stub::before{left:-12px;}.pv-hero .pv-stub::after{right:-12px;}
+  .pv-hero .pv-pill{display:inline-flex;align-items:center;background:#1c1c1e;color:#fff;padding:7px 12px;border-radius:999px;font:600 10.5px 'Inter',sans-serif;letter-spacing:.09em;text-transform:uppercase;}
   /* воздух между смысловыми блоками Привата и Обучения */
   .pv-sec{margin-top:40px;}
   .cs-head{margin-top:30px;}
@@ -1394,7 +1395,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 21.10 design56</div>
+        <div class="pf-build" id="pfBuild">сборка 21.10 design57</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5489,7 +5490,7 @@
     var join = '<button class="buy-btn" id="pvJoin">Подать заявку в закрытый канал</button>';   // always shown; the link itself comes from the server (JOIN_URL)
     box.innerHTML =
       '<div class="pv">'+
-        '<div class="pv-hero"><span class="pv-tag"><b>01</b><i></i>Приват · участник</span><h2>Вы в привате</h2><p>Оплата получена. Доступ действует до '+esc(pvFmt(PRIV.until))+'.</p></div>'+
+        '<div class="pv-hero">'+heroHd("Приват · участник")+'<h2>Вы в привате</h2><p>Оплата получена. Доступ действует до '+esc(pvFmt(PRIV.until))+'.</p>'+heroStub("Приват · участник")+'</div>'+
         '<div class="pv-sec"><span>Что дальше</span><h3>Как всё будет</h3></div>'+
         '<div class="pv-plain">'+
           '<div class="pv-pl"><div class="pv-pl-hd"><b>Доступ откроется '+esc(p.start||"1 декабря")+'</b></div><p>В этот день запускаем приват и принимаем всех участников. Ваше место уже за вами, ничего больше оплачивать не нужно.</p></div>'+
@@ -5688,6 +5689,8 @@
     });
     (function(){ var ct=box.querySelector(".pv-cta"), pv=box.querySelector(".pv"); function m(){ if(ct&&pv&&ct.offsetHeight) pv.style.setProperty("--pvcta", ct.offsetHeight+"px"); } m(); setTimeout(m,300); })();
   }
+  function heroHd(e){ return '<span class="pv-tag">'+esc(String(e||"").split(" · ")[0])+'</span>'; }
+  function heroStub(e){ var x=String(e||"").split(" · ")[1]; return x ? '<div class="pv-stub"><span class="pv-pill">'+esc(x)+'</span></div>' : '<div class="pv-stub" style="padding:0;border:0;margin-top:20px"></div>'; }
   function renderPrivate(box){
     var p = PRODUCTS.find(function(x){ return x.kind==="community"; });
     if(!p){ box.innerHTML=""; return; }
@@ -5708,7 +5711,7 @@
     var guar = p.guarantee ? '<div class="pv-guar"><span>'+esc(p.guarantee.eyebrow)+'</span><h3>'+esc(p.guarantee.title)+'</h3><p>'+esc(p.guarantee.text)+'</p></div>' : '';
     box.innerHTML =
       '<div class="pv">'+
-        '<div class="pv-hero"><span class="pv-tag"><b>01</b><i></i>'+esc(p.eyebrow)+'</span><h2>'+esc(p.headline||p.title).replace("закрытый и приватный канал",'<span class="pv-hl">закрытый и приватный канал</span>')+'</h2><p>'+esc(p.lead||p.sub)+'</p></div>'+
+        '<div class="pv-hero">'+heroHd(p.eyebrow)+'<h2>'+esc(p.headline||p.title)+'</h2><p>'+esc(p.lead||p.sub)+'</p>'+heroStub(p.eyebrow)+'</div>'+
         '<div class="pv-sec"><span>Что входит</span><h3>'+esc(p.includeTitle||"Что вы получаете")+'</h3></div>'+
         checkRows(p.include||[])+
         month+
