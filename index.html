@@ -1397,7 +1397,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 23.10 design63</div>
+        <div class="pf-build" id="pfBuild">сборка 23.10 design64</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5026,14 +5026,14 @@
     var mock = (THUMB_PATTERNS[s.id] || THUMB_PATTERNS.base)(s);
     return (
       '<article class="card" role="'+(s.external?'link':'button')+'" tabindex="0" data-id="'+s.id+'"'+(s.external?' data-ext="'+esc(s.external)+'"':'')+'>'+
-        '<div class="card-title">'+(q?hl(s.title,q):s.title)+'</div>'+
-        '<div class="card-desc">'+(q?hl(s.desc,q):s.desc)+'</div>'+
+        '<div class="card-title">'+(q?hl(s.title,q):esc(s.title))+'</div>'+
+        '<div class="card-desc">'+(q?hl(s.desc,q):esc(s.desc))+'</div>'+
         (q && s.title.toLowerCase().indexOf(q)===-1 && s.desc.toLowerCase().indexOf(q)===-1 && outlineHit(s,q) ? '<div class="card-hit"><b>В разделе</b><span>'+hl(outlineHit(s,q),q)+'</span></div>' : '')+
         (s.cover ? '<div class="card-thumb has-img"><img src="'+safeSrc(s.cover)+'" alt="" '+(idx<2?'fetchpriority="high"':'loading="lazy"')+' decoding="async">'+(s.external?'<span class="ext-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>'+esc(s.domain||"")+'</span>':'')+'</div>' : '')+
         (s.cover ? '' :
         '<div class="card-thumb '+s.id+'" aria-hidden="true">'+
           '<div class="thumb-eyebrow">'+CATEGORY_LABEL[s.category]+'</div>'+
-          '<div class="thumb-title">'+s.title+'</div>'+
+          '<div class="thumb-title">'+esc(s.title)+'</div>'+
           '<div class="thumb-mock">'+mock+'</div>'+
           '<div class="thumb-badge"><span class="dot"><svg viewBox="0 0 24 24"><use href="#'+s.icon+'"/></svg></span><span class="bar"></span></div>'+
         '</div>')+
@@ -5089,9 +5089,9 @@
   // image address from content: only https or a relative path, always escaped (a bad value gives an empty picture, not a script)
   function safeSrc(u){ u=String(u==null?"":u); return (/^(https:\/\/|\/|\.\/)/i.test(u) || /^[\w\-][\w\-.\/%]*$/.test(u)) ? esc(u) : ""; }
   function hl(t,q){
-    if(!q) return t;
+    if(!q) return esc(t);
     var i=t.toLowerCase().indexOf(q);
-    if(i===-1) return t;
+    if(i===-1) return esc(t);
     return esc(t.slice(0,i))+"<mark>"+esc(t.slice(i,i+q.length))+"</mark>"+hl(t.slice(i+q.length),q).replace(/^/,"");
   }
 
@@ -5408,10 +5408,10 @@
         '<button class="btn-icon star-btn'+(isFav?' active':'')+'" id="starBtn" aria-label="В избранное" aria-pressed="'+(isFav?'true':'false')+'"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></button></div>'+
         (s.cover && !s.hideCover ? '<img class="art-cover" src="'+safeSrc(s.cover)+'" alt="">' : '')+
         '<div class="art-row"><span class="badge '+s.category+'">'+CATEGORY_LABEL[s.category]+'</span></div>'+
-        '<h1 class="art-title">'+s.title+'</h1>'+
+        '<h1 class="art-title">'+esc(s.title)+'</h1>'+
         (s.hideReadTime ? '' : '<div class="art-meta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'+readMins(s._md)+' мин чтения</div>')+
-        (s.leadBelow ? '' : '<p class="art-lead">'+s.desc+'</p>')+
-        '<div class="md">'+(s.leadBelow ? mdRender(s._md).replace('</figure>','</figure><p class="art-lead-sm">'+s.desc+'</p>') : mdRender(s._md))+'</div>';
+        (s.leadBelow ? '' : '<p class="art-lead">'+esc(s.desc)+'</p>')+
+        '<div class="md">'+(s.leadBelow ? mdRender(s._md).replace('</figure>','</figure><p class="art-lead-sm">'+esc(s.desc)+'</p>') : mdRender(s._md))+'</div>';
       wireArticle(view);
       setupReadProgress(view);
       document.getElementById("backBtn").addEventListener("click", closeDetail);
@@ -5428,12 +5428,12 @@
     view.innerHTML =
       '<div class="detail-head">'+
         '<button class="btn-icon" id="backBtn" aria-label="Назад"><svg viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg></button>'+
-        '<div class="detail-title">'+s.title+'</div>'+
+        '<div class="detail-title">'+esc(s.title)+'</div>'+
         '<button class="btn-icon" id="shareBtn" aria-label="Поделиться">'+SHARE_SVG+'</button>'+
         '<button class="btn-icon star-btn'+(isFav?' active':'')+'" id="starBtn" aria-label="В избранное" aria-pressed="'+(isFav?'true':'false')+'"><svg viewBox="0 0 24 24" fill="'+(isFav?'currentColor':'none')+'"><use href="#i-star"/></svg></button>'+
       '</div>'+
       '<div class="detail-tag"><span class="badge '+s.category+'">'+CATEGORY_LABEL[s.category]+'</span></div>'+
-      '<div class="detail-desc">'+s.desc+'</div>'+
+      '<div class="detail-desc">'+esc(s.desc)+'</div>'+
       '<div class="detail-icon-row"><div class="icon-tile"><svg viewBox="0 0 24 24"><use href="#'+s.icon+'"/></svg></div><span>Раздел базы знаний · P2P арбитраж</span></div>'+
       '<div class="outline-title">Что внутри раздела</div>'+
       s.outline.map(function(item, i){
@@ -5538,8 +5538,8 @@
     if(cpage){ renderCourse(box, cpage); return; }
     box.innerHTML = PRODUCTS.filter(function(p){ return p.kind===kind; }).map(function(p){
       return '<article class="prod" data-pid="'+p.id+'">'+
-        '<div class="prod-cover '+p.cover+'"><div class="prod-eyebrow">'+p.eyebrow+'</div><div class="prod-cover-title">'+p.title+'</div></div>'+
-        '<div class="prod-title">'+p.title+'</div><div class="prod-sub">'+p.sub+'</div>'+
+        '<div class="prod-cover '+p.cover+'"><div class="prod-eyebrow">'+esc(p.eyebrow)+'</div><div class="prod-cover-title">'+esc(p.title)+'</div></div>'+
+        '<div class="prod-title">'+esc(p.title)+'</div><div class="prod-sub">'+esc(p.sub)+'</div>'+
         '<div class="prod-foot"><div class="prod-price">'+p.price+(p.per?'<small>'+p.per+'</small>':'')+'</div><button class="prod-more">'+(p.kind==="community"?"Подробнее":"Смотреть")+'</button></div>'+
       '</article>';
     }).join("");
@@ -5826,8 +5826,8 @@
     state.selectedId = "p:"+id;
     var view=document.getElementById("view-detail");
     view.innerHTML =
-      '<div class="detail-head"><button class="btn-icon" id="backBtn" aria-label="Назад"><svg viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg></button><div class="detail-title">'+p.title+'</div></div>'+
-      '<div class="prod-cover '+p.cover+'" style="margin-top:var(--sp-4);height:150px;"><div class="prod-eyebrow">'+p.eyebrow+'</div><div class="prod-cover-title">'+p.title+'</div></div>'+
+      '<div class="detail-head"><button class="btn-icon" id="backBtn" aria-label="Назад"><svg viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg></button><div class="detail-title">'+esc(p.title)+'</div></div>'+
+      '<div class="prod-cover '+p.cover+'" style="margin-top:var(--sp-4);height:150px;"><div class="prod-eyebrow">'+esc(p.eyebrow)+'</div><div class="prod-cover-title">'+esc(p.title)+'</div></div>'+
       '<div class="detail-desc">'+p.desc+'</div>'+
       '<div class="outline-title">'+(p.kind==="community"?"Что вы получите":"Что входит")+'</div>'+
       p.features.map(function(f,i){ return '<div class="outline-item"><span class="outline-num">'+(i+1)+'</span><div>'+f+'</div></div>'; }).join("")+

@@ -102,3 +102,41 @@ test("BL-22: в записи оплаты цена заказа в своей в
   const rec = await getJSON(env, "paid:30");
   assert.equal(rec.amount, "4990"); assert.equal(rec.currency, "RUB");
 });
+
+// ---- второй проход внешней проверки
+test("BL-08: одновременная оплата VIP и «Базовый» всегда оставляет VIP и оба заказа (200 прогонов)", async () => {
+  let bad = 0;
+  for (let i = 0; i < 200; i++) {
+    const env = mkEnv({ PAY2328_KEY: "key-2328-test", PAY2328_PROJECT: "p" }, 6);
+    await env.SUBS.put("ord:u40-a", JSON.stringify({ uid: 40, p: "2328", product: "course", tier: "pro", exp: { a: "44990", c: "RUB" } }));
+    await env.SUBS.put("ord:u40-b", JSON.stringify({ uid: 40, p: "2328", product: "course", tier: "eco", exp: { a: "9990", c: "RUB" } }));
+    const h = (o, a) => req(env, "/pay/webhook2328", hook2328({ order_id: o, uuid: "u-" + o, payment_status: "paid", amount: a, currency: "RUB" }));
+    await Promise.all(i % 2 ? [h("u40-a", "44990"), h("u40-b", "9990")] : [h("u40-b", "9990"), h("u40-a", "44990")]);
+    const c = await getJSON(env, "course:40");
+    if (!c || c.tier !== "pro" || !c.orders.includes("u40-a") || !c.orders.includes("u40-b")) bad++;
+  }
+  assert.equal(bad, 0, "ошибочных итогов: " + bad);
+});
+
+test("N-02b: // отклоняется, а варианты с ./ и %2e сводятся к одному пути и делят один кэш 404", async () => {
+  const env = mkEnv({ CONTENT_REPO: "o/r", GH_TOKEN: "x" });
+  let gh = 0; const f = world.fetch;
+  globalThis.fetch = async (u, o) => { if (String(u).includes("api.github.com")) { gh++; return new Response("nf", { status: 404 }); } return f(u, o); };
+  const t = (await (await req(env, "/api/session", { body: { initData: initData(user(7)) } })).json()).token;
+  const get = (p) => req(env, "/c/" + p + "?t=" + encodeURIComponent(t), { method: "GET" });
+  assert.equal((await get("content//articles/x.md")).status, 400);
+  for (const p of ["content/articles/x.md", "content/./articles/x.md", "content/a/../articles/x.md", "content/%2e/articles/x.md", "content/a/%2e%2e/articles/x.md"]) await get(p);
+  assert.equal(gh, 1, "обращений к GitHub: " + gh);
+});
+
+test("бюджет: худший случай (12 заявок курса, 12 заявок привата, 8 просроченных) укладывается в 50 вызовов с запасом", async () => {
+  freezeAt(Date.UTC(2027, 0, 20));
+  const env = mkEnv({ PRIVATE_CHANNEL: CH, COURSE_CH_ECO: "-2001", SWEEP_JOIN_BATCH: "12", SWEEP_KICK_BATCH: "8" });
+  for (let i = 0; i < 12; i++) { await env.SUBS.put("jrc:" + (500 + i) + ":eco", "1"); await env.SUBS.put("course:" + (500 + i), JSON.stringify({ tier: "eco", orders: ["o"] })); }
+  for (let i = 0; i < 12; i++) { await env.SUBS.put("jr:" + (600 + i), "1"); await paidRec(env, 600 + i); }
+  for (let i = 0; i < 8; i++) { await env.SUBS.put("paid:" + (700 + i), JSON.stringify({ until: Date.UTC(2027, 0, 10), orders: ["o"] }), { metadata: { until: Date.UTC(2027, 0, 10) } }); world.members.add(CH + ":" + (700 + i)); }
+  const c0 = env.SUBS.ops + world.tg.length;
+  await scheduled(env);
+  const used = env.SUBS.ops + world.tg.length - c0;
+  assert.ok(used <= 46, "вызовов: " + used);
+});

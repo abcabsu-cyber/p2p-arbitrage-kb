@@ -266,7 +266,7 @@ async function courseSweep(env) {
 }
 const batchOf = (v, d) => { const n = Math.floor(Number(v)); return n >= 1 && n <= 500 ? n : d; };
 async function privateSweep(env0) {
-  SUBREQ = { n: 0, max: 40 };
+  SUBREQ = { n: 0, max: 36 };
   try { await privateSweepRun({ ...env0, SUBS: countedKV(env0.SUBS) }); } finally { SUBREQ = null; }
 }
 async function privateSweepRun(env) {
@@ -539,15 +539,24 @@ async function grantAccess(env, uid, info) {
 
 const getCourse = async (env, uid) => { const r = await env.SUBS.get(`course:${uid}`); return r ? JSON.parse(r) : null; };
 const courseRank = (c) => (c && tierOf(c.tier) ? tierOf(c.tier).rank : 0);
+// One key per purchase (cb:<uid>:<order>, tier in metadata): concurrent grants never overwrite each other there. After every write of the
+// course record it is checked against all purchase keys, so whichever writer is last always leaves the highest tier and every order.
 async function grantCourse(env, uid, tier, info) {
+  const first = await getCourse(env, uid);
+  if (hasOrder(first, info.order)) return first;   // already counted
+  await env.SUBS.put(`cb:${uid}:${info.order}`, tier, { expirationTtl: 86400 * 800, metadata: { t: tier } });
   let rec;
   for (let i = 0; i < 3; i++) {
     const cur = await getCourse(env, uid);
-    if (hasOrder(cur, info.order)) return cur;   // already counted
-    const best = cur && courseRank(cur) >= tierOf(tier).rank ? cur.tier : tier;   // keep the highest tier bought
-    rec = { tier: best, tiers: [...new Set([...((cur && cur.tiers) || []), tier])], ts: Date.now(), orders: [...((cur && cur.orders) || []), info.order].filter(Boolean), amount: info.amount, currency: info.currency };
+    const l = await env.SUBS.list({ prefix: `cb:${uid}:` });
+    const tiers = new Set([...((cur && cur.tiers) || []), ...(cur && cur.tier ? [cur.tier] : []), tier]);
+    const orders = new Set([...((cur && cur.orders) || []), info.order]);
+    for (const k of l.keys) { if (k.metadata && tierOf(k.metadata.t)) tiers.add(k.metadata.t); orders.add(k.name.slice(`cb:${uid}:`.length)); }
+    const best = [...tiers].filter((t) => tierOf(t)).sort((x, y) => tierOf(y).rank - tierOf(x).rank)[0];
+    const done = cur && cur.tier === best && [...tiers].every((t) => (cur.tiers || []).includes(t)) && [...orders].every((o) => hasOrder(cur, o));
+    if (done) return cur;
+    rec = { tier: best, tiers: [...tiers], ts: Date.now(), orders: [...orders].filter(Boolean), amount: info.amount, currency: info.currency };
     await env.SUBS.put(`course:${uid}`, JSON.stringify(rec), { metadata: { tier: rec.tier, ts: rec.ts, n: rec.orders.length } });
-    if (hasOrder(await getCourse(env, uid), info.order)) break;
   }
   return rec;
 }
@@ -725,7 +734,7 @@ async function handleContent(env, req, url) {
   let path; try { path = decodeURIComponent(url.pathname.slice(3)); } catch { return new Response("bad path", { status: 400, headers: h }); }   // after "/c/"
   if (path === "bundle") return handleBundle(env, url, h);
   const tgm = path.match(/^ext\/tg\/(\w{8,64}\.(?:png|jpe?g|webp|gif))$/i);   // article images hosted on telegra.ph: fetched here once, then cached
-  if (!tgm && (!/^content\/[\w\-./]+\.(?:md|json|jpe?g|png|webp|gif|svg|mp4)$/i.test(path) || path.includes(".."))) return new Response("bad path", { status: 400, headers: h });
+  if (!tgm && (!/^content\/[\w\-./]+\.(?:md|json|jpe?g|png|webp|gif|svg|mp4)$/i.test(path) || /(^|\/)\.{1,2}(\/|$)|\/\//.test(path))) return new Response("bad path", { status: 400, headers: h });
   const tok = url.searchParams.get("t");
   if (!(await checkToken(env, tok)) || (await isBanned(env, String(tok).split(".")[0]))) return new Response("forbidden", { status: 403, headers: h });
   const ext = path.split(".").pop().toLowerCase();
