@@ -6,6 +6,11 @@
 //   BOT_TOKEN       token from BotFather            (Secret)
 //   WEBHOOK_SECRET  any long random string           (Secret)
 //   OWNER_ID        your numeric Telegram user id    (Variable)
+//   SESSION_SECRET  separate long random string that signs the materials access tokens (Secret); if absent WEBHOOK_SECRET is used
+//   SETUP_KEY       separate long random string that opens /setup (Secret); if absent WEBHOOK_SECRET is used
+//   PAY_BINDING     optional: "off" turns off the check that a payment notice matches its invoice (emergency switch only)
+//   AUTO_REVOKE_ON_REFUND  optional: "1" closes access automatically when a refund is paid (default: only alert the owner)
+//   SWEEP_KICK_BATCH / SWEEP_JOIN_BATCH  optional numbers: how many expired members are removed / waiting join requests approved per run (default 8 / 12)
 //   HELEKET_MERCHANT  Merchant UUID from heleket.com   (Secret)
 //   HELEKET_KEY       Payment API key from heleket.com (Secret)
 //   NOTIFY_BOT_TOKEN  token of a separate bot for payment alerts (Secret); NOTIFY_CHAT_ID optional, default OWNER_ID
@@ -656,7 +661,8 @@ async function processPaymentInner(env, body, status) {
 // ---------- closed content (served only to opened-in-Telegram users) ----------
 const SESSION_TTL = 24 * 3600;   // seconds
 const b64u = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-async function sessKey(env) { return enc.encode("sess:" + env.WEBHOOK_SECRET); }
+// token signing key: SESSION_SECRET if set (separate from the Telegram webhook secret), otherwise WEBHOOK_SECRET as before
+async function sessKey(env) { return enc.encode("sess:" + (env.SESSION_SECRET || env.WEBHOOK_SECRET)); }
 async function makeToken(env, uid) {
   // stable within a day: the same token means the same image URLs, so the phone's cache is reused instead of reloading everything
   const exp = (Math.floor(Date.now() / 1000 / SESSION_TTL) + 2) * SESSION_TTL;   // valid for 24-48 hours
@@ -804,7 +810,8 @@ async function handleUpdate(env, ctx, upd) {
   if (String(m.from && m.from.id) === String(env.OWNER_ID)) await dbg(env, { from: m.from.id, chat: m.chat.type, text: String(m.text).slice(0, 24) });   // not for everyone: KV writes are scarce (free plan)
   const chatId = m.chat.id;
   const text = m.text.trim();
-  const isOwner = String(m.from.id) === String(env.OWNER_ID);
+  // owner commands only from the owner's own private chat: the group/chat id inside the update can never redirect replies or files elsewhere
+  const isOwner = !!env.OWNER_ID && String(m.from.id) === String(env.OWNER_ID) && m.chat.type === "private" && String(m.chat.id) === String(m.from.id);
 
   if (m.chat.type === "private" && !/^\/start(\s|$)/.test(text)) await addSub(env, chatId, m.from);   // anyone who writes to the bot is a subscriber
 
@@ -888,7 +895,7 @@ async function handleUpdate(env, ctx, upd) {
   }
 
   if (/^\/backup/.test(text)) {
-    const r = await backupPaid(env, chatId);
+    const r = await backupPaid(env, env.OWNER_ID);
     if (!r.ok) await tg(env, "sendMessage", { chat_id: chatId, text: "Не удалось отправить копию: " + (r.description || "ошибка") });
     return;
   }
@@ -909,7 +916,7 @@ async function handleUpdate(env, ctx, upd) {
     const q = (x) => '"' + String(x).replace(/"/g, '""') + '"';
     const csv = "id,username,name,since,paid\n" + rows.map((r) => [r[0], q(r[1]), q(r[2]), r[3], paidIds.has(r[0]) ? "yes" : ""].join(",")).join("\n");
     const fd = new FormData();
-    fd.append("chat_id", String(chatId));
+    fd.append("chat_id", String(env.OWNER_ID));
     fd.append("caption", `Подписчиков бота: ${rows.length}, оплативших: ${paidIds.size}`);
     fd.append("document", new Blob([csv], { type: "text/csv" }), `users-${new Date().toISOString().slice(0, 10)}.csv`);
     await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendDocument`, { method: "POST", body: fd });
@@ -1213,7 +1220,7 @@ const handlers = {
 
     // One-time setup: open  https://<worker>/setup?key=<WEBHOOK_SECRET>
     if (url.pathname === "/setup") {
-      if (!safeEq(url.searchParams.get("key") || "", env.WEBHOOK_SECRET)) return new Response("forbidden", { status: 403 });
+      if (!safeEq(url.searchParams.get("key") || "", env.SETUP_KEY || env.WEBHOOK_SECRET)) return new Response("forbidden", { status: 403 });
       const a = await tg(env, "setWebhook", {
         url: url.origin + "/webhook",
         secret_token: env.WEBHOOK_SECRET,
