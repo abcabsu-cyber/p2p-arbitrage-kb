@@ -28,6 +28,7 @@
 })();
 </script>
 <meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'none'">
 <title>P2P Арбитраж</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <link rel="preconnect" href="https://p2p-study-bot.abc-absu.workers.dev">
@@ -1396,7 +1397,7 @@
           <button class="theme-btn" data-theme-mode="light">Светлая</button>
           <button class="theme-btn" data-theme-mode="dark">Тёмная</button>
         </div>
-        <div class="pf-build" id="pfBuild">сборка 21.10 design62</div>
+        <div class="pf-build" id="pfBuild">сборка 23.10 design63</div>
         <button class="empty-btn" id="devLog" hidden style="display:none;margin:12px auto 0;">Журнал запуска</button>
         <pre id="devLogOut" hidden style="white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,Menlo,monospace;color:var(--fg-secondary);margin:10px 0;text-align:left;"></pre>
         <button class="empty-btn" id="devReset" hidden style="display:none;margin:12px auto 0;">Сбросить (для разработки)</button>
@@ -5028,7 +5029,7 @@
         '<div class="card-title">'+(q?hl(s.title,q):s.title)+'</div>'+
         '<div class="card-desc">'+(q?hl(s.desc,q):s.desc)+'</div>'+
         (q && s.title.toLowerCase().indexOf(q)===-1 && s.desc.toLowerCase().indexOf(q)===-1 && outlineHit(s,q) ? '<div class="card-hit"><b>В разделе</b><span>'+hl(outlineHit(s,q),q)+'</span></div>' : '')+
-        (s.cover ? '<div class="card-thumb has-img"><img src="'+s.cover+'" alt="" '+(idx<2?'fetchpriority="high"':'loading="lazy"')+' decoding="async">'+(s.external?'<span class="ext-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>'+esc(s.domain||"")+'</span>':'')+'</div>' : '')+
+        (s.cover ? '<div class="card-thumb has-img"><img src="'+safeSrc(s.cover)+'" alt="" '+(idx<2?'fetchpriority="high"':'loading="lazy"')+' decoding="async">'+(s.external?'<span class="ext-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>'+esc(s.domain||"")+'</span>':'')+'</div>' : '')+
         (s.cover ? '' :
         '<div class="card-thumb '+s.id+'" aria-hidden="true">'+
           '<div class="thumb-eyebrow">'+CATEGORY_LABEL[s.category]+'</div>'+
@@ -5085,6 +5086,8 @@
     return null;
   }
   function esc(t){ return String(t).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+  // image address from content: only https or a relative path, always escaped (a bad value gives an empty picture, not a script)
+  function safeSrc(u){ u=String(u==null?"":u); return (/^(https:\/\/|\/|\.\/)/i.test(u) || /^[\w\-][\w\-.\/%]*$/.test(u)) ? esc(u) : ""; }
   function hl(t,q){
     if(!q) return t;
     var i=t.toLowerCase().indexOf(q);
@@ -5096,7 +5099,7 @@
   // ---- tiny markdown renderer for content/articles/*.md ----
   function mdInline(t){
     t = esc(t);
-    t = t.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g,'<span class="shot"><img src="$2" alt="$1" role="button" tabindex="0" loading="lazy"><span class="shot-cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5M10.5 8v5M8 10.5h5"/></svg>$1</span></span>');
+    t = t.replace(/!\[([^\]]*)\]\((?!(?:javascript|data|vbscript):)([^)\s]+)\)/gi,'<span class="shot"><img src="$2" alt="$1" role="button" tabindex="0" loading="lazy"><span class="shot-cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5M10.5 8v5M8 10.5h5"/></svg>$1</span></span>');
     t = t.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,function(_,txt,href){ return /^(https?:\/\/|tg:\/\/)/i.test(href) ? '<a href="'+href+'" data-ext="1">'+txt+'</a>' : txt; });   // only web and Telegram links become links
     t = t.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>').replace(/`([^`]+)`/g,'<code>$1</code>');
     return t;
@@ -5403,7 +5406,7 @@
         '<div class="detail-head"><button class="btn-icon" id="backBtn" aria-label="Назад"><svg viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg></button><div style="flex:1"></div>'+
         '<button class="btn-icon" id="shareBtn" aria-label="Поделиться">'+SHARE_SVG+'</button>'+
         '<button class="btn-icon star-btn'+(isFav?' active':'')+'" id="starBtn" aria-label="В избранное" aria-pressed="'+(isFav?'true':'false')+'"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></button></div>'+
-        (s.cover && !s.hideCover ? '<img class="art-cover" src="'+s.cover+'" alt="">' : '')+
+        (s.cover && !s.hideCover ? '<img class="art-cover" src="'+safeSrc(s.cover)+'" alt="">' : '')+
         '<div class="art-row"><span class="badge '+s.category+'">'+CATEGORY_LABEL[s.category]+'</span></div>'+
         '<h1 class="art-title">'+s.title+'</h1>'+
         (s.hideReadTime ? '' : '<div class="art-meta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'+readMins(s._md)+' мин чтения</div>')+

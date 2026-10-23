@@ -22,8 +22,8 @@ test("вебхуки провайдеров: неверная и пустая п
   assert.equal(r.status, 401);
   r = await req(env, "/pay/webhook2328", { body: '{"order_id":"u1-x","payment_status":"paid","sign":"aa"}' });
   assert.equal(r.status, 401);
-  r = await req(mkEnv({}), "/pay/webhook", { body: '{"order_id":"u1-x","status":"paid","sign":"aa"}' });
-  assert.notEqual(r.status, 200);
+  r = await req(mkEnv({}), "/pay/webhook", { body: "{\"order_id\":\"u1-x\",\"status\":\"paid\",\"sign\":\"aa\"}" });
+  assert.equal(await r.text(), "P2P Study bot is running", "старый маршрут Heleket удалён: обычный ответ, ничего не обрабатывается");
 });
 
 test("/webhook и служебные маршруты закрыты без секрета", async () => {

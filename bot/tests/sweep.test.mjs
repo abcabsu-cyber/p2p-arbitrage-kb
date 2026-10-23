@@ -61,29 +61,37 @@ test("F-05 (негативный): до даты запуска никого н�
   assert.equal(bans().length, 0);
 });
 
-test("F-06: 200 просроченных удаляются за проходы с размером порции из настройки", async () => {
+// одно обращение воркера не должно делать больше ~50 вызовов (KV + Telegram), иначе на бесплатном плане часть работы молча обрывается
+const calls = (env) => env.SUBS.ops + world.tg.length + world.docs.length;
+async function runCounted(env) { const c0 = calls(env); await scheduled(env); return calls(env) - c0; }
+
+test("F-06/F-N5: 200 просроченных удаляются за несколько проходов, каждый проход укладывается в бюджет", async () => {
   freezeAt(DEC20);
   const env = mkEnv({ PRIVATE_CHANNEL: CH, SWEEP_KICK_BATCH: "100" });
   for (let i = 0; i < 200; i++) { await expired(env, 1000 + i); world.members.add(CH + ":" + (1000 + i)); }
-  await scheduled(env); assert.equal(bans().length, 100);
-  await scheduled(env); assert.equal(bans().length, 200);
+  let runs = 0;
+  while (bans().length < 200 && runs < 80) { const used = await runCounted(env); assert.ok(used <= 50, "проход сделал " + used + " вызовов"); runs++; }
+  assert.equal(bans().length, 200);
 });
 
-test("F-06: по умолчанию 8 удалений и 12 заявок за проход (как раньше)", async () => {
+test("F-N5: очередь заявок и очередь удалений вместе не превышают бюджет, удаления не голодают", async () => {
   freezeAt(DEC20);
-  const env = mkEnv({ PRIVATE_CHANNEL: CH });
-  for (let i = 0; i < 20; i++) { await expired(env, 2000 + i); world.members.add(CH + ":" + (2000 + i)); await env.SUBS.put("jr:" + (3000 + i), CH); await env.SUBS.put("paid:" + (3000 + i), JSON.stringify({ until: Date.UTC(2027, 0, 15) }), { metadata: { until: Date.UTC(2027, 0, 15) } }); }
-  await scheduled(env);
-  assert.equal(bans().length, 8);
-  assert.equal(world.tg.filter((x) => x.method === "approveChatJoinRequest").length, 12);
+  const env = mkEnv({ PRIVATE_CHANNEL: CH, SWEEP_JOIN_BATCH: "100", SWEEP_KICK_BATCH: "100" });
+  for (let i = 0; i < 100; i++) { await env.SUBS.put("jr:" + (3000 + i), "1"); await env.SUBS.put("paid:" + (3000 + i), JSON.stringify({ until: Date.UTC(2027, 0, 15) }), { metadata: { until: Date.UTC(2027, 0, 15) } }); }
+  for (let i = 0; i < 20; i++) { await expired(env, 2000 + i); world.members.add(CH + ":" + (2000 + i)); }
+  const used = await runCounted(env);
+  assert.ok(used <= 50, "проход сделал " + used + " вызовов");
+  assert.ok(world.tg.filter((x) => x.method === "approveChatJoinRequest").length >= 1);
+  assert.ok(bans().length >= 1, "удаления просроченных не должны ждать, пока опустеет очередь заявок");
 });
 
-test("F-06: размер порции заявок настраивается", async () => {
+test("F-06: размеры порции из настройки действуют как верхняя граница", async () => {
   freezeAt(DEC20);
-  const env = mkEnv({ PRIVATE_CHANNEL: CH, SWEEP_JOIN_BATCH: "50" });
-  for (let i = 0; i < 40; i++) { await env.SUBS.put("jr:" + (3000 + i), CH); await env.SUBS.put("paid:" + (3000 + i), JSON.stringify({ until: Date.UTC(2027, 0, 15) }), { metadata: { until: Date.UTC(2027, 0, 15) } }); }
+  const env = mkEnv({ PRIVATE_CHANNEL: CH, SWEEP_JOIN_BATCH: "3", SWEEP_KICK_BATCH: "2" });
+  for (let i = 0; i < 20; i++) { await expired(env, 2000 + i); world.members.add(CH + ":" + (2000 + i)); await env.SUBS.put("jr:" + (3000 + i), "1"); await env.SUBS.put("paid:" + (3000 + i), JSON.stringify({ until: Date.UTC(2027, 0, 15) }), { metadata: { until: Date.UTC(2027, 0, 15) } }); }
   await scheduled(env);
-  assert.equal(world.tg.filter((x) => x.method === "approveChatJoinRequest").length, 40);
+  assert.equal(bans().length, 2);
+  assert.equal(world.tg.filter((x) => x.method === "approveChatJoinRequest").length, 3);
 });
 
 test("F-06: при частом расписании суточная копия уходит один раз", async () => {

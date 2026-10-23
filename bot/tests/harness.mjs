@@ -16,12 +16,12 @@ export function mkKV(jitterMs = 0) {
   const m = new Map();
   const sl = () => (jitterMs ? new Promise((r) => setTimeout(r, Math.random() * jitterMs)) : Promise.resolve());
   const kv = {
-    _m: m, writes: 0, failPut: null,
-    async get(k) { await sl(); return m.has(k) ? m.get(k).v : null; },
-    async getWithMetadata(k) { await sl(); const e = m.get(k); return { value: e ? e.v : null, metadata: e ? e.md : null }; },
-    async put(k, v, o) { await sl(); if (kv.failPut && kv.failPut(k)) throw new Error("KV put failed"); kv.writes++; m.set(k, { v: String(v), md: o && o.metadata }); },
-    async delete(k) { m.delete(k); },
-    async list(o = {}) {
+    _m: m, writes: 0, ops: 0, failPut: null,
+    async get(k) { kv.ops++; await sl(); return m.has(k) ? m.get(k).v : null; },
+    async getWithMetadata(k) { kv.ops++; await sl(); const e = m.get(k); return { value: e ? e.v : null, metadata: e ? e.md : null }; },
+    async put(k, v, o) { kv.ops++; await sl(); if (kv.failPut && kv.failPut(k)) throw new Error("KV put failed"); kv.writes++; m.set(k, { v: String(v), md: o && o.metadata }); },
+    async delete(k) { kv.ops++; m.delete(k); },
+    async list(o = {}) { kv.ops++;
       let keys = [...m.keys()].filter((k) => k.startsWith(o.prefix || "")).sort();
       const start = o.cursor ? Number(o.cursor) : 0;
       const lim = o.limit || 1000;

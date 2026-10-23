@@ -11,8 +11,6 @@
 //   PAY_BINDING     optional: "off" turns off the check that a payment notice matches its invoice (emergency switch only)
 //   AUTO_REVOKE_ON_REFUND  optional: "1" closes access automatically when a refund is paid (default: only alert the owner)
 //   SWEEP_KICK_BATCH / SWEEP_JOIN_BATCH  optional numbers: how many expired members are removed / waiting join requests approved per run (default 8 / 12)
-//   HELEKET_MERCHANT  Merchant UUID from heleket.com   (Secret)
-//   HELEKET_KEY       Payment API key from heleket.com (Secret)
 //   NOTIFY_BOT_TOKEN  token of a separate bot for payment alerts (Secret); NOTIFY_CHAT_ID optional, default OWNER_ID
 //   PAY2328_PROJECT   project UUID from my.2328.io    (Variable)
 //   PAY2328_KEY       API key (not the Payout key) from my.2328.io (Secret)
@@ -21,7 +19,7 @@
 //   COURSE_CH_ECO / COURSE_CH_STD / COURSE_CH_PRO  numeric ids of the course tier channels (bot = admin with invite + ban rights) (Variables)
 //   COURSE_JOIN_ECO / COURSE_JOIN_STD / COURSE_JOIN_PRO  invite links of those channels, join requests ON (Variables)
 //   CRYPTOBOT_TOKEN   Crypto Pay API token from @CryptoBot → Crypto Pay (Secret); webhook URL: <worker>/pay/webhook-cryptobot
-//   PAY_PROVIDER      optional: "2328" or "heleket" (by default 2328 if its keys are set)
+//   PAY_PROVIDER      optional: "2328" (the default when its keys are set)
 //   PAY_AMOUNT / PAY_CURRENCY  optional variables, default 4990 / RUB
 //   CONTENT_REPO    private GitHub repo with the materials, e.g. "abcabsu-cyber/p2p-content"  (Variable)
 //   GH_TOKEN        fine-grained GitHub token, read-only access to that repo               (Secret)
@@ -54,7 +52,6 @@ const CFG = {
   COURSE_START: Date.UTC(2026, 11, 1), // course channels accept members from this day (same as the private channel)
   PAY_CURRENCY: "RUB",
   PAY_LIFETIME: 3600,                 // invoice lifetime, seconds
-  HELEKET_IP: "31.133.220.8",
   PRIVAT_START: Date.UTC(2026, 11, 1), // access opens 1 December 2026
   PRIVAT_DAYS: 31,
   BTN_OPEN: "Открыть приложение",
@@ -95,7 +92,9 @@ async function channelState(env, uid) {
   return v;
 }
 
+let SUBREQ = null;   // while a sweep runs: counts every KV and Telegram call, because one invocation may make only about 50 of them on the Free plan
 async function tg(env, method, body) {
+  if (SUBREQ) SUBREQ.n++;
   const r = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/${method}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -150,25 +149,8 @@ async function dbg(env, entry) {
 }
 
 
-// ---------- payments (Heleket) ----------
-const md5hex = async (str) => hex(new Uint8Array(await crypto.subtle.digest("MD5", enc.encode(str))));
+// ---------- payments ----------
 const b64 = (str) => { const b = enc.encode(str); let s = ""; for (const x of b) s += String.fromCharCode(x); return btoa(s); };
-// PHP-style variants of the same JSON (slashes escaped / non-ASCII escaped) so the signature matches however the sender serialised it
-const jsonVariants = (obj) => {
-  const plain = JSON.stringify(obj);
-  const slashes = plain.replace(/\//g, "\\/");
-  const uni = (t) => t.replace(/[\u0080-￿]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
-  return [plain, slashes, uni(plain), uni(slashes)];
-};
-async function verifyHeleketSign(body, key) {
-  if (!key) return false;   // never verify against an unset key (it would become the string "undefined")
-  const got = String(body.sign || "").toLowerCase();
-  if (!got) return false;
-  const rest = { ...body }; delete rest.sign;
-  for (const v of jsonVariants(rest)) if (safeEq(await md5hex(b64(v) + key), got)) return true;
-  return false;
-}
-
 const getPaid = async (env, uid) => { const r = await env.SUBS.get(`paid:${uid}`); return r ? JSON.parse(r) : null; };
 const hasAccess = (p) => !!p && p.until > Date.now();
 
@@ -250,41 +232,67 @@ async function handleJoinRequest(env, jr) {
   if (r && r.ok) { await env.SUBS.delete(`kick:${uid}`).catch(() => {}); await say("Заявка одобрена, добро пожаловать в закрытый канал! ✅"); }
   else await dbg(env, { join: "APPROVE FAILED " + String(r && r.description).slice(0, 60), uid });
 }
-// hourly: approve requests waiting for the opening day, remove people whose access has ended
+// one budget for both sweeps (course + private): KV calls count too, and the Free plan allows about 50 calls per invocation
+const countedKV = (kv) => {
+  const w = (f) => (...a) => { if (SUBREQ) SUBREQ.n++; return kv[f](...a); };
+  return { get: w("get"), getWithMetadata: w("getWithMetadata"), put: w("put"), delete: w("delete"), list: w("list") };
+};
+const roomLeft = (cap) => !SUBREQ || SUBREQ.n < Math.min(cap || SUBREQ.max, SUBREQ.max);   // joins stop earlier (cap 24) so that removals of expired people are never starved
+// a join request is removed from the queue only when Telegram has answered it; a temporary failure (429, network) keeps it for the next run
+async function finishJoin(env, k, r) {
+  if (r && r.ok) { await env.SUBS.delete(k.name); return; }
+  const d = String((r && r.description) || "");
+  const n = ((k.metadata && k.metadata.n) || 0) + 1;
+  if (/ALREADY_PARTICIPANT|HIDE_REQUESTER_MISSING|USER_ID_INVALID/i.test(d) || n >= 12) { await env.SUBS.delete(k.name); return; }   // nothing left to answer, or 12 failed runs in a row
+  await env.SUBS.put(k.name, "1", { expirationTtl: 86400 * 60, metadata: { n } });
+}
 async function courseSweep(env) {
   if (Date.now() < CFG.COURSE_START) return;
   const l = await env.SUBS.list({ prefix: "jrc:", limit: batchOf(env.SWEEP_JOIN_BATCH, 12) });
   for (const k of l.keys) {
+    if (!roomLeft(24)) return;
     const [, uid, tier] = k.name.split(":");
     const ch = env["COURSE_CH_" + String(tier).toUpperCase()];
-    if (ch && tierOf(tier) && courseRank(await getCourse(env, uid)) >= tierOf(tier).rank) {
+    if (!ch || !tierOf(tier)) { await env.SUBS.delete(k.name); continue; }
+    if (courseRank(await getCourse(env, uid)) >= tierOf(tier).rank && !(await isBanned(env, uid))) {
       const r = await tg(env, "approveChatJoinRequest", { chat_id: ch, user_id: Number(uid) }).catch(() => null);
       if (r && r.ok) await tg(env, "sendMessage", { chat_id: Number(uid), text: `Обучение началось! Заявка в канал «${CFG.COURSE[tier].name}» одобрена ✅` }).catch(() => {});
+      await finishJoin(env, k, r);
+    } else {
+      const r = await tg(env, "declineChatJoinRequest", { chat_id: ch, user_id: Number(uid) }).catch(() => null);
+      await finishJoin(env, k, r);
     }
-    await env.SUBS.delete(k.name);
   }
 }
 const batchOf = (v, d) => { const n = Math.floor(Number(v)); return n >= 1 && n <= 500 ? n : d; };
-async function privateSweep(env) {
+async function privateSweep(env0) {
+  SUBREQ = { n: 0, max: 40 };
+  try { await privateSweepRun({ ...env0, SUBS: countedKV(env0.SUBS) }); } finally { SUBREQ = null; }
+}
+async function privateSweepRun(env) {
   await courseSweep(env).catch((e) => console.log("course sweep", e));
   if (!privOn(env)) return;
   const now = Date.now();
   if (now >= CFG.PRIVAT_START) {
     const l = await env.SUBS.list({ prefix: "jr:", limit: batchOf(env.SWEEP_JOIN_BATCH, 12) });
     for (const k of l.keys) {
+      if (!roomLeft(24)) break;
       const uid = k.name.slice(3);
       const paid = await getPaid(env, uid);
+      let r;
       if (hasAccess(paid) && !(await isBanned(env, uid))) {
-        const r = await tg(env, "approveChatJoinRequest", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid) }).catch(() => null);
+        r = await tg(env, "approveChatJoinRequest", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid) }).catch(() => null);
         if (r && r.ok) await tg(env, "sendMessage", { chat_id: Number(uid), text: "Доступ открыт! Заявка в закрытый канал одобрена ✅" }).catch(() => {});
       } else {
-        await tg(env, "declineChatJoinRequest", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid) }).catch(() => {});   // no valid payment: do not leave the request hanging
+        r = await tg(env, "declineChatJoinRequest", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid) }).catch(() => null);   // no valid payment: do not leave the request hanging
       }
-      await env.SUBS.delete(k.name);
+      await finishJoin(env, k, r);
     }
   }
   if (now < CFG.PRIVAT_START) return;   // nobody is removed before the opening day
   const kickBatch = batchOf(env.SWEEP_KICK_BATCH, 8);
+  const kicked = new Set();   // who is already handled: one list instead of a read per person (every call counts against the per-run budget)
+  for (let kc; ;) { const kl = await env.SUBS.list({ prefix: "kick:", cursor: kc }); kl.keys.forEach((x) => kicked.add(x.name.slice(5))); if (kl.list_complete) break; kc = kl.cursor; }
   let cursor, done = 0, errors = 0;
   scan: do {
     const l = await env.SUBS.list({ prefix: "paid:", cursor });
@@ -292,8 +300,8 @@ async function privateSweep(env) {
       const un = k.metadata && k.metadata.until;
       if (!un || un > now) continue;
       const uid = k.name.slice(5);
-      if (await env.SUBS.get(`kick:${uid}`)) continue;
-      if (done >= kickBatch) break scan;    // subrequest budget per run; the rest goes on the next run
+      if (kicked.has(uid)) continue;
+      if (done >= kickBatch || !roomLeft()) break scan;    // subrequest budget per run; the rest goes on the next run
       done++;
       const res = await kickFromPrivate(env, uid);
       if (res === "error") { errors++; if (errors >= 3) break scan; continue; }   // Telegram failed: no mark, so the next run tries again (3 in a row means a systemic problem: stop early)
@@ -338,10 +346,7 @@ const PAY_WARN = {
 // ---------- payment providers ----------
 const payProvider = (env) => {
   const has2328 = !!(env.PAY2328_PROJECT && env.PAY2328_KEY);
-  const hasHel = !!(env.HELEKET_MERCHANT && env.HELEKET_KEY);
-  if (env.PAY_PROVIDER === "heleket") return hasHel ? "heleket" : null;
-  if (env.PAY_PROVIDER === "2328") return has2328 ? "2328" : null;
-  return has2328 ? "2328" : hasHel ? "heleket" : null;
+  return has2328 ? "2328" : null;
 };
 const API2328 = "https://api.2328.io/api";
 async function sign2328(bodyStr, key) {
@@ -420,7 +425,7 @@ async function handlePay2328Webhook(env, req) {
   let body; try { body = JSON.parse(raw); } catch { return new Response("bad json", { status: 400 }); }
   if (!body || typeof body !== "object") return new Response("bad json", { status: 400 });
   if (!env.PAY2328_KEY || !(await verify2328(raw, body, env.PAY2328_KEY))) {
-    await dbg(env, { pay: "2328 BAD SIGN", ip: req.headers.get("cf-connecting-ip") });
+    console.log("2328 bad sign");   // no KV write: anyone can send unsigned requests
     return new Response("unauthorized", { status: 401 });
   }
   await dbg(env, { pay: `2328 ${body.payment_status} ${body.order_id}` });
@@ -494,7 +499,7 @@ async function handleCryptoBotWebhook(env, req) {
   const secret = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(env.CRYPTOBOT_TOKEN)));
   const want = hex(await hmac(secret, raw));
   if (!safeEq(want, String(req.headers.get("crypto-pay-api-signature") || "").toLowerCase())) {
-    await dbg(env, { pay: "CRYPTOBOT BAD SIGN", ip: req.headers.get("cf-connecting-ip") });
+    console.log("cryptobot bad sign");
     return new Response("unauthorized", { status: 401 });
   }
   let body; try { body = JSON.parse(raw); } catch { return new Response("bad json", { status: 400 }); }
@@ -513,31 +518,6 @@ async function reconcileCryptoBot(env, order, ord) {
   if (!inv || inv.payload !== order) return;
   const n = normCryptoBot(inv);
   if (n.status === "paid") await processPayment(env, n, "paid");
-}
-
-async function createInvoice(env, user, offer) {
-  offer = offer || offerFor(env, null);
-  const order = newOrderId(user.id);
-  const body = JSON.stringify({
-    amount: offer.amount,
-    currency: offer.currency,
-    order_id: order,
-    url_callback: CFG.SELF + "/pay/webhook",
-    url_success: `https://t.me/${CFG.BOT_USERNAME}`,   // back to Telegram, not the public site
-    url_return: `https://t.me/${CFG.BOT_USERNAME}`,
-    lifetime: CFG.PAY_LIFETIME,
-    additional_data: String(user.id),
-  });
-  const r = await fetch("https://api.heleket.com/v1/payment", {
-    method: "POST",
-    headers: { "content-type": "application/json", merchant: env.HELEKET_MERCHANT, sign: await md5hex(b64(body) + env.HELEKET_KEY) },
-    body,
-  });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok || !j.result || !j.result.url) return { error: j.message || (j.errors ? JSON.stringify(j.errors) : "heleket " + r.status) };
-  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: j.result.uuid, url: j.result.url, ...ordExtra(offer), who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
-  await env.SUBS.put(`lastord:${user.id}`, order, { expirationTtl: 60 * 60 * 24 });
-  return { url: j.result.url, order };
 }
 
 const hasOrder = (rec, order) => !!(rec && order && Array.isArray(rec.orders) && rec.orders.includes(order));
@@ -571,22 +551,6 @@ async function grantCourse(env, uid, tier, info) {
   }
   return rec;
 }
-async function handlePayWebhook(env, req) {
-  if (!env.HELEKET_KEY) return new Response("off", { status: 404 });
-  const raw = await req.text();
-  if (raw.length > 20000) return new Response("too big", { status: 413 });
-  let body; try { body = JSON.parse(raw); } catch { return new Response("bad json", { status: 400 }); }
-  if (!body || typeof body !== "object") return new Response("bad json", { status: 400 });
-  const ip = req.headers.get("cf-connecting-ip");
-  if (!(await verifyHeleketSign(body, env.HELEKET_KEY))) {
-    await dbg(env, { pay: "BAD SIGN", ip });
-    return new Response("bad sign", { status: 403 });
-  }
-  const status = body.status;
-  await dbg(env, { pay: `${status} ${body.order_id}`, ip: ip === CFG.HELEKET_IP ? "ok" : ip });
-  return processPayment(env, body, status);
-}
-
 // "" when the notice fits the order, otherwise a short reason
 function orderMismatch(ord, body) {
   if (ord.uuid && body.uuid && String(ord.uuid) !== String(body.uuid)) return "номер счёта в уведомлении отличается от созданного";
@@ -684,9 +648,17 @@ async function processPaymentInner(env, body, status) {
     }
     return new Response("ok");
   }
+  if (await isBanned(env, uid)) {   // a banned person is not given access: the owner decides about the money
+    if (!(await env.SUBS.get(`bn:${body.order_id}`))) {
+      await env.SUBS.put(`bn:${body.order_id}`, "1", { expirationTtl: 86400 * 3 });
+      await notifyOwner(env, `<b>🚫 Оплата от исключённого пользователя. Доступ не выдан</b>\nНужен возврат денег, либо снимите бан (<code>/unban ${uid}</code>) и выдайте доступ вручную: <code>${isCourse ? "/grantcourse " + uid + " " + ordKV.tier : "/grant " + uid}</code>\n\n${details(await whoBlock(uid))}`);
+    }
+    return new Response("ok");
+  }
   if (await env.SUBS.get(`rcpt:${body.order_id}`)) return new Response("ok");   // this order was already processed (also after a /revoke)
   const cur = await getPaid(env, uid);
   const curCourse = isCourse ? await getCourse(env, uid) : null;
+  const recAmt = ordKV && ordKV.exp ? ordKV.exp.a : body.amount, recCur = ordKV && ordKV.exp ? ordKV.exp.c : body.currency;   // the record keeps the price of the order, always in its own currency
   const bonusOrder = "bonus:" + body.order_id;
   const courseDone = isCourse && hasOrder(curCourse, body.order_id), bonusDone = isCourse && hasOrder(cur, bonusOrder);
   if (isCourse ? (courseDone && bonusDone) : hasOrder(cur, body.order_id)) return new Response("ok");   // repeated notification
@@ -696,15 +668,14 @@ async function processPaymentInner(env, body, status) {
   try {
     if (isCourse) {
       // each step runs only if it is not done yet, so a retry after a half-finished grant completes the rest
-      if (!courseDone) crec = await grantCourse(env, uid, ordKV.tier, { order: body.order_id, amount: body.payment_amount_usd || body.amount, currency: body.currency });
+      if (!courseDone) crec = await grantCourse(env, uid, ordKV.tier, { order: body.order_id, amount: recAmt, currency: recCur });
       rec = bonusDone ? cur : await grantAccess(env, uid, { order: bonusOrder, amount: "bonus", currency: "" });   // bonus: a month of the private channel
-    } else rec = await grantAccess(env, uid, { order: body.order_id, amount: body.payment_amount_usd || body.amount, currency: body.currency });
+    } else rec = await grantAccess(env, uid, { order: body.order_id, amount: recAmt, currency: recCur });
   }
   catch (e) { await env.SUBS.delete(`rcpt:${body.order_id}`).catch(() => {}); throw e; }   // grant failed: release the claim so the provider's retry can succeed
-  const banNote = (await isBanned(env, uid)) ? "\n\n🚫 Пользователь исключён (/ban): доступ записан, но в каналы его не пустят. Решите, возвращать ли деньги или снять бан: /unban " + uid : "";
   await notifyOwner(env, isCourse
-    ? `🎓 <b>ОПЛАТА ОБУЧЕНИЯ${status === "paid_over" ? " (переплата)" : ""}</b>\n\n${details(await whoBlock(uid))}\n⏳ Бонус-приват до: ${fmtDate(rec.until)}${banNote}`
-    : `🛒 <b>НОВАЯ ОПЛАТА${status === "paid_over" ? " (переплата)" : ""}${cur ? " · продление" : ""}</b>\n\n${details(await whoBlock(uid))}\n⏳ Доступ до: ${fmtDate(rec.until)}${banNote}`);
+    ? `🎓 <b>ОПЛАТА ОБУЧЕНИЯ${status === "paid_over" ? " (переплата)" : ""}</b>\n\n${details(await whoBlock(uid))}\n⏳ Бонус-приват до: ${fmtDate(rec.until)}`
+    : `🛒 <b>НОВАЯ ОПЛАТА${status === "paid_over" ? " (переплата)" : ""}${cur ? " · продление" : ""}</b>\n\n${details(await whoBlock(uid))}\n⏳ Доступ до: ${fmtDate(rec.until)}`);
   try {
     const r = await tg(env, "sendMessage", {
       chat_id: uid,
@@ -754,7 +725,7 @@ async function handleContent(env, req, url) {
   let path; try { path = decodeURIComponent(url.pathname.slice(3)); } catch { return new Response("bad path", { status: 400, headers: h }); }   // after "/c/"
   if (path === "bundle") return handleBundle(env, url, h);
   const tgm = path.match(/^ext\/tg\/(\w{8,64}\.(?:png|jpe?g|webp|gif))$/i);   // article images hosted on telegra.ph: fetched here once, then cached
-  if (!tgm && (!/^content\/[\w\-./]+$/.test(path) || path.includes(".."))) return new Response("bad path", { status: 400, headers: h });
+  if (!tgm && (!/^content\/[\w\-./]+\.(?:md|json|jpe?g|png|webp|gif|svg|mp4)$/i.test(path) || path.includes(".."))) return new Response("bad path", { status: 400, headers: h });
   const tok = url.searchParams.get("t");
   if (!(await checkToken(env, tok)) || (await isBanned(env, String(tok).split(".")[0]))) return new Response("forbidden", { status: 403, headers: h });
   const ext = path.split(".").pop().toLowerCase();
@@ -777,11 +748,13 @@ async function getFile(env, path, tgm) {
   const ext = path.split(".").pop().toLowerCase();
   const isImg = /^(jpe?g|png|webp|gif|svg|mp4)$/.test(ext);
   const ttl = (isImg ? 3600 : 30) * 1000;
+  const nf = NOTFOUND.get(path);
+  if (nf && Date.now() - nf < 60000) return { status: 404 };   // missing files are remembered for a minute: no GitHub request per attempt
   let e = MEM.get(path);
   if (!e || Date.now() - e.t > ttl) {
     const up = tgm ? await fetch("https://telegra.ph/file/" + tgm[1], { headers: { "user-agent": "Mozilla/5.0" } }) : await fetchContent(env, path, e && e.upTag);
     if (up.status === 304 && e) { e.t = Date.now(); }   // GitHub: unchanged (a 304 does not count against the 5000/hour limit)
-    else if (!up.ok) { if (e) { e.t = Date.now() - ttl + 15000; /* serve stale on upstream trouble, retry in 15 s */ } else return { status: up.status === 404 ? 404 : 502 }; }
+    else if (!up.ok) { if (e) { e.t = Date.now() - ttl + 15000; /* serve stale on upstream trouble, retry in 15 s */ } else { if (up.status === 404) { if (NOTFOUND.size > 500) NOTFOUND.clear(); NOTFOUND.set(path, Date.now()); return { status: 404 }; } return { status: 502 }; } }
     else {
       const buf = await up.arrayBuffer();
       e = { t: Date.now(), upTag: up.headers.get("etag") || "", buf, type: MIME[ext] || "application/octet-stream", tag: '"' + buf.byteLength + "-" + (await crypto.subtle.digest("SHA-1", buf).then((d) => hex(new Uint8Array(d)).slice(0, 12))) + '"' };
@@ -804,7 +777,7 @@ async function handleBundle(env, url, h) {
   const md = {}; bodies.forEach((b, i) => { md[b] = files[i].status ? "" : dec.decode(files[i].buf); });
   return new Response(JSON.stringify({ m: mt, p: pt, md }), { headers: { ...h, "content-type": "application/json; charset=utf-8", "cache-control": "private, no-store" } });
 }
-const MEM = new Map();
+const MEM = new Map(), NOTFOUND = new Map();
 let MEM_BYTES = 0;
 
 
@@ -854,7 +827,7 @@ async function sendWelcome(env, chatId) {
 
 async function handleUpdate(env, ctx, upd) {
   if (upd.chat_join_request) { await handleJoinRequest(env, upd.chat_join_request); return; }
-  if (upd.my_chat_member && upd.my_chat_member.chat.type === "channel" && upd.my_chat_member.new_chat_member.status === "administrator" && env.OWNER_ID) {   // tells the owner the channel id for PRIVATE_CHANNEL
+  if (upd.my_chat_member && upd.my_chat_member.chat.type === "channel" && upd.my_chat_member.new_chat_member.status === "administrator" && env.OWNER_ID && String(upd.my_chat_member.from && upd.my_chat_member.from.id) === String(env.OWNER_ID)) {   // tells the owner the channel id for PRIVATE_CHANNEL
     const c = upd.my_chat_member.chat;
     await tg(env, "sendMessage", { chat_id: env.OWNER_ID, parse_mode: "HTML", text: `Бот стал администратором канала «${esc(c.title || "")}».\nID канала: <code>${c.id}</code>${String(c.id) === String(env.PRIVATE_CHANNEL) ? "\nЭто закрытый канал из настроек ✅" : "\nЕсли это закрытый канал привата, впишите этот ID в переменную PRIVATE_CHANNEL. Если это канал обучения: COURSE_CH_ECO, COURSE_CH_STD или COURSE_CH_PRO."}` }).catch(() => {});
     return;
@@ -1235,7 +1208,6 @@ const handlers = {
 
     if (url.pathname === "/pay/webhook2328" && req.method === "POST") { if (limited(req, "hook", 120)) return tooMany(); return handlePay2328Webhook(env, req); }
     if (url.pathname === "/pay/webhook-cryptobot" && req.method === "POST") { if (limited(req, "hook", 120)) return tooMany(); return handleCryptoBotWebhook(env, req); }
-    if (url.pathname === "/pay/webhook" && req.method === "POST") { if (limited(req, "hook", 120)) return tooMany(); return handlePayWebhook(env, req); }
 
     if (url.pathname === "/api/pay/create" || url.pathname === "/api/status") {
       const h = cors(req.headers.get("origin"));
@@ -1251,7 +1223,7 @@ const handlers = {
       if (url.pathname === "/api/status") {
         const rk = "rc" + user.id, rNow = Date.now();
         let course = await getCourse(env, user.id);
-        if ((!hasAccess(paid) || (body.product === "course" && !course)) && !(RECON.get(rk) > rNow - 15000)) { RECON.set(rk, rNow); if (RECON.size > 2000) RECON.clear(); try { await reconcile2328(env, user.id); paid = await getPaid(env, user.id); course = await getCourse(env, user.id); } catch (e) { await dbg(env, { reconcile: "2328 FAILED " + String(e && e.message || e).slice(0, 80) }); } }   // lost 2328/Crypto Bot webhook, orders from the last 24 h (Heleket has no reconcile path)
+        if ((!hasAccess(paid) || (body.product === "course" && !course)) && !(RECON.get(rk) > rNow - 15000)) { RECON.set(rk, rNow); if (RECON.size > 2000) RECON.clear(); try { await reconcile2328(env, user.id); paid = await getPaid(env, user.id); course = await getCourse(env, user.id); } catch (e) { await dbg(env, { reconcile: "2328 FAILED " + String(e && e.message || e).slice(0, 80) }); } }   // lost 2328/Crypto Bot webhook, orders from the last 24 h
         const cinfo = course && tierOf(course.tier) ? { tier: course.tier, name: CFG.COURSE[course.tier].name, join: env["COURSE_JOIN_" + course.tier.toUpperCase()] || undefined } : undefined;
         return json({ ok: true, paid: hasAccess(paid), until: paid ? paid.until : null, join: hasAccess(paid) && env.JOIN_URL ? env.JOIN_URL : undefined, course: cinfo }, 200, h);
       }
@@ -1268,12 +1240,12 @@ const handlers = {
       // an open invoice for the same thing is handed out again (no new invoice, no KV writes); at most 20 new invoices per user per day
       const lastOrder = await env.SUBS.get(`lastord:${user.id}`);
       const prevOrd = lastOrder ? JSON.parse((await env.SUBS.get(`ord:${lastOrder}`)) || "null") : null;
-      const sameThing = prevOrd && (prevOrd.product || "privat") === offer.product && (offer.product !== "course" || prevOrd.tier === offer.tier) && (prevOrd.p || "heleket") === prov;
+      const sameThing = prevOrd && (prevOrd.product || "privat") === offer.product && (offer.product !== "course" || prevOrd.tier === offer.tier) && prevOrd.p === prov;
       if (sameThing && prevOrd.url && Date.now() - prevOrd.ts < (CFG.PAY_LIFETIME - 120) * 1000 && !(await env.SUBS.get(`rcpt:${lastOrder}`))) return json({ ok: true, url: prevOrd.url, tg: !!prevOrd.tg }, 200, h);
       const madeToday = prevOrd && Date.now() - prevOrd.ts < 86400000 ? (prevOrd.n || 1) : 0;
       if (madeToday >= 20) return tooMany(h);
       offer.n = madeToday + 1;
-      let inv = prov === "cryptobot" ? await createInvoiceCryptoBot(env, user, offer) : prov === "2328" ? await createInvoice2328(env, user, offer) : await createInvoice(env, user, offer);
+      let inv = prov === "cryptobot" ? await createInvoiceCryptoBot(env, user, offer) : await createInvoice2328(env, user, offer);
       if (inv.error && prov !== "cryptobot" && env.CRYPTOBOT_TOKEN) {   // main provider down: fall back to Crypto Bot instead of a dead end
         await dbg(env, { pay: "FALLBACK to cryptobot: " + String(inv.error).slice(0, 60) });
         const fb = await createInvoiceCryptoBot(env, user, offer);
