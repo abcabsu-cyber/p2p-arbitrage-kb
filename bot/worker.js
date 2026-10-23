@@ -174,13 +174,16 @@ const hasAccess = (p) => !!p && p.until > Date.now();
 
 // ---------- private channel automation (needs PRIVATE_CHANNEL = numeric chat id; bot must be admin with "invite" and "ban" rights) ----------
 const privOn = (env) => !!env.PRIVATE_CHANNEL;
+// "removed" = taken out of the channel, "absent" = was not in it (nothing to do), "error" = Telegram failed, try again later
 async function kickFromPrivate(env, uid) {
-  if (!privOn(env) || String(uid) === String(env.OWNER_ID)) return false;
+  if (!privOn(env) || String(uid) === String(env.OWNER_ID)) return "absent";
   const m = await tg(env, "getChatMember", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid) }).catch(() => null);
-  if (!(m && m.ok && ["member", "restricted"].includes(m.result.status))) return false;   // not in the channel (or admin): nothing to remove
-  const b = await tg(env, "banChatMember", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid), revoke_messages: false });
-  if (b && b.ok) await tg(env, "unbanChatMember", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid), only_if_banned: true });   // ban+unban = removal, the user can come back after renewing
-  return !!(b && b.ok);
+  if (!(m && m.ok)) return "error";
+  if (!["member", "restricted"].includes(m.result.status)) return "absent";   // not in the channel (or admin): nothing to remove
+  const b = await tg(env, "banChatMember", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid), revoke_messages: false }).catch(() => null);
+  if (!(b && b.ok)) return "error";
+  await tg(env, "unbanChatMember", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid), only_if_banned: true }).catch(() => {});   // ban+unban = removal, the user can come back after renewing
+  return "removed";
 }
 // course tier channels: COURSE_CH_ECO / COURSE_CH_STD / COURSE_CH_PRO (numeric ids), invite links COURSE_JOIN_ECO / _STD / _PRO
 const courseChannel = (env, chatId) => Object.keys(CFG.COURSE).find((t) => env["COURSE_CH_" + t.toUpperCase()] && String(env["COURSE_CH_" + t.toUpperCase()]) === String(chatId));
@@ -226,7 +229,7 @@ async function handleJoinRequest(env, jr) {
 // hourly: approve requests waiting for the opening day, remove people whose access has ended
 async function courseSweep(env) {
   if (Date.now() < CFG.COURSE_START) return;
-  const l = await env.SUBS.list({ prefix: "jrc:", limit: 12 });
+  const l = await env.SUBS.list({ prefix: "jrc:", limit: batchOf(env.SWEEP_JOIN_BATCH, 12) });
   for (const k of l.keys) {
     const [, uid, tier] = k.name.split(":");
     const ch = env["COURSE_CH_" + String(tier).toUpperCase()];
@@ -237,38 +240,48 @@ async function courseSweep(env) {
     await env.SUBS.delete(k.name);
   }
 }
+const batchOf = (v, d) => { const n = Math.floor(Number(v)); return n >= 1 && n <= 500 ? n : d; };
 async function privateSweep(env) {
   await courseSweep(env).catch((e) => console.log("course sweep", e));
   if (!privOn(env)) return;
   const now = Date.now();
   if (now >= CFG.PRIVAT_START) {
-    const l = await env.SUBS.list({ prefix: "jr:", limit: 12 });
+    const l = await env.SUBS.list({ prefix: "jr:", limit: batchOf(env.SWEEP_JOIN_BATCH, 12) });
     for (const k of l.keys) {
       const uid = k.name.slice(3);
       const paid = await getPaid(env, uid);
-      if (hasAccess(paid)) {
+      if (hasAccess(paid) && !(await isBanned(env, uid))) {
         const r = await tg(env, "approveChatJoinRequest", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid) }).catch(() => null);
         if (r && r.ok) await tg(env, "sendMessage", { chat_id: Number(uid), text: "Доступ открыт! Заявка в закрытый канал одобрена ✅" }).catch(() => {});
+      } else {
+        await tg(env, "declineChatJoinRequest", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid) }).catch(() => {});   // no valid payment: do not leave the request hanging
       }
       await env.SUBS.delete(k.name);
     }
   }
-  let cursor, done = 0;
-  do {
+  if (now < CFG.PRIVAT_START) return;   // nobody is removed before the opening day
+  const kickBatch = batchOf(env.SWEEP_KICK_BATCH, 8);
+  let cursor, done = 0, errors = 0;
+  scan: do {
     const l = await env.SUBS.list({ prefix: "paid:", cursor });
     for (const k of l.keys) {
       const un = k.metadata && k.metadata.until;
-      if (!un || un > now || now < CFG.PRIVAT_START) continue;
+      if (!un || un > now) continue;
       const uid = k.name.slice(5);
       if (await env.SUBS.get(`kick:${uid}`)) continue;
-      if (done >= 8) return;    // subrequest budget per run; the rest goes on the next hour
+      if (done >= kickBatch) break scan;    // subrequest budget per run; the rest goes on the next run
       done++;
-      const ok = await kickFromPrivate(env, uid);
-      await env.SUBS.put(`kick:${uid}`, ok ? "1" : "0", { expirationTtl: 86400 * 90 });
-      if (ok) await tg(env, "sendMessage", { chat_id: Number(uid), text: "Срок доступа в закрытый канал закончился, мы убрали вас из канала. Продлить можно в приложении, раздел «Приват»: после оплаты снова отправьте заявку на вступление." }).catch(() => {});
+      const res = await kickFromPrivate(env, uid);
+      if (res === "error") { errors++; if (errors >= 3) break scan; continue; }   // Telegram failed: no mark, so the next run tries again (3 in a row means a systemic problem: stop early)
+      await env.SUBS.put(`kick:${uid}`, res === "removed" ? "1" : "0", { expirationTtl: 86400 * 90 });
+      if (res === "removed") await tg(env, "sendMessage", { chat_id: Number(uid), text: "Срок доступа в закрытый канал закончился, мы убрали вас из канала. Продлить можно в приложении, раздел «Приват»: после оплаты снова отправьте заявку на вступление." }).catch(() => {});
     }
     cursor = l.list_complete ? undefined : l.cursor;
   } while (cursor);
+  if (errors && !(await env.SUBS.get("sweeperr"))) {   // tell the owner once a day, not every run
+    await env.SUBS.put("sweeperr", "1", { expirationTtl: 86400 });
+    await notifyOwner(env, "<b>⚠️ Сейчас не удалось проверить или убрать из закрытого канала часть участников с истёкшим сроком.</b>\nПопробую снова на следующем запуске. Если сообщение повторяется, проверьте права бота в канале (приглашение и блокировка участников).");
+  }
 }
 const fmtDate = (ts) => new Date(ts).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Moscow" }).replace(/\s?г\.$/, "");
 
@@ -868,7 +881,7 @@ async function handleUpdate(env, ctx, upd) {
     const had = await env.SUBS.get(`paid:${rev[1]}`);
     await env.SUBS.delete(`paid:${rev[1]}`);
     await env.SUBS.delete(`lastord:${rev[1]}`);   // otherwise the status check would find the old paid order and grant access again
-    await tg(env, "sendMessage", { chat_id: chatId, text: had ? `Оплата пользователя ${rev[1]} отозвана: доступ закрыт${privOn(env) && (await kickFromPrivate(env, rev[1])) ? ", из закрытого канала убран" : ""}.` : `У пользователя ${rev[1]} не было оплаты.` });
+    await tg(env, "sendMessage", { chat_id: chatId, text: had ? `Оплата пользователя ${rev[1]} отозвана: доступ закрыт${privOn(env) && (await kickFromPrivate(env, rev[1])) === "removed" ? ", из закрытого канала убран" : ""}.` : `У пользователя ${rev[1]} не было оплаты.` });
     return;
   }
 
@@ -1114,7 +1127,8 @@ async function withSecurityHeaders(res) {
 
 const handlers = {
   async scheduled(event, env, ctx) {
-    if (env.OWNER_ID && new Date().getUTCHours() === 6) ctx.waitUntil(backupPaid(env, env.OWNER_ID).catch((e) => console.log("backup error", e)));   // once a day even if the cron runs hourly
+    const nowD = new Date(Date.now());   // once a day, in the first run of the 06:00 UTC hour (the cron may run every few minutes)
+    if (env.OWNER_ID && nowD.getUTCHours() === 6 && nowD.getUTCMinutes() < 10) ctx.waitUntil(backupPaid(env, env.OWNER_ID).catch((e) => console.log("backup error", e)));   // once a day even if the cron runs hourly
     ctx.waitUntil(privateSweep(env).catch(async (e) => { console.log("sweep error", e); await dbg(env, { sweep: "ERROR " + String(e && e.message || e).slice(0, 80) }); }));
   },
   async fetch(req, env, ctx) {
