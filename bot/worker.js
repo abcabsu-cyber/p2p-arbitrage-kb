@@ -185,6 +185,30 @@ async function kickFromPrivate(env, uid) {
   await tg(env, "unbanChatMember", { chat_id: env.PRIVATE_CHANNEL, user_id: Number(uid), only_if_banned: true }).catch(() => {});   // ban+unban = removal, the user can come back after renewing
   return "removed";
 }
+// removes the person from every course tier channel; returns how many removals succeeded
+async function kickFromCourseChannels(env, uid) {
+  let kicked = 0;
+  for (const t of Object.keys(CFG.COURSE)) {
+    const ch = env["COURSE_CH_" + t.toUpperCase()]; if (!ch) continue;
+    const b = await tg(env, "banChatMember", { chat_id: ch, user_id: Number(uid) }).catch(() => null);
+    if (b && b.ok) { kicked++; await tg(env, "unbanChatMember", { chat_id: ch, user_id: Number(uid), only_if_banned: true }).catch(() => {}); }
+  }
+  return kicked;
+}
+// manual and automatic revocation share these two
+async function revokePrivat(env, uid) {
+  const had = !!(await env.SUBS.get(`paid:${uid}`));
+  await env.SUBS.delete(`paid:${uid}`);
+  await env.SUBS.delete(`lastord:${uid}`);   // otherwise the status check would find the old paid order and grant access again
+  const removed = privOn(env) && (await kickFromPrivate(env, uid)) === "removed";
+  return { had, removed };
+}
+async function revokeCourse(env, uid) {
+  const had = await getCourse(env, uid);
+  await env.SUBS.delete(`course:${uid}`);
+  const kicked = await kickFromCourseChannels(env, uid);
+  return { had: !!had, kicked };
+}
 // course tier channels: COURSE_CH_ECO / COURSE_CH_STD / COURSE_CH_PRO (numeric ids), invite links COURSE_JOIN_ECO / _STD / _PRO
 const courseChannel = (env, chatId) => Object.keys(CFG.COURSE).find((t) => env["COURSE_CH_" + t.toUpperCase()] && String(env["COURSE_CH_" + t.toUpperCase()]) === String(chatId));
 async function handleCourseJoin(env, jr, tier) {
@@ -371,7 +395,7 @@ async function createInvoice2328(env, user, offer) {
 }
 // 2328 payload -> the common shape used by processPayment
 function norm2328(b) {
-  const map = { paid: "paid", overpaid: "paid_over", underpaid: "underpaid", aml_lock: "aml_lock", refund_process: "refund_process", refund_paid: "refund_paid", refund_fail: "refund_fail" };
+  const map = { paid: "paid", overpaid: "paid_over", underpaid: "underpaid", aml_lock: "aml_lock", refund_process: "refund_process", refund_paid: "refund_paid", refund_fail: "refund_fail", wrong_amount: "wrong_amount", wrong_amount_waiting: "wrong_amount_waiting", system_fail: "system_fail" };
   return {
     status: map[b.payment_status] || "ignore:" + b.payment_status,
     order_id: b.order_id, uuid: b.uuid, amount: b.amount, currency: b.currency,
@@ -621,6 +645,27 @@ async function processPaymentInner(env, body, status) {
         await tg(env, "sendMessage", { chat_id: uid0, text: "Ваш платёж находится на проверке у платёжного сервиса ⏳\n\nОбычно это занимает около 20 минут, максимум 8 часов. Если платёж пропустят, доступ откроется автоматически и мы напишем вам. Если нет, деньги вернутся на ваш адрес отправителя. Вопросы можно задать нам: @hanballit" }).catch(() => {});
       }
     }
+    if (status === "refund_paid" && uid0) {
+      const cmd = isCourse ? `/revokecourse ${uid0}` : `/revoke ${uid0}`;
+      const pr = await getPaid(env, uid0), cr = isCourse ? await getCourse(env, uid0) : null;
+      // automatic revocation only when this is the person's single paid order, so other purchases are never touched
+      const single = isCourse
+        ? hasOrder(cr, body.order_id) && cr.orders.length === 1 && (!pr || (pr.orders || []).every((o) => o === "bonus:" + body.order_id))
+        : hasOrder(pr, body.order_id) && pr.orders.length === 1;
+      if (env.AUTO_REVOKE_ON_REFUND === "1" && single) {
+        if (isCourse) { await revokeCourse(env, uid0); await revokePrivat(env, uid0); } else await revokePrivat(env, uid0);
+        extra = `\n\n✅ Доступ закрыт автоматически (AUTO_REVOKE_ON_REFUND). Вернуть: ${isCourse ? "/grantcourse " + uid0 + " " + ordKV.tier : "/grant " + uid0}`;
+      } else {
+        extra = `\n\nДоступ остаётся. Если возврат полный, закройте вручную: <code>${cmd}</code>${isCourse ? `\nи бонус-приват: <code>/revoke ${uid0}</code>` : ""}${single ? "" : "\nУ человека есть и другие оплаты: проверьте, что именно возвращено."}`;
+      }
+    }
+    if (uid0 && ["underpaid", "wrong_amount", "wrong_amount_waiting", "system_fail"].includes(status) && !(await env.SUBS.get(`pw:${body.order_id}`))) {
+      await env.SUBS.put(`pw:${body.order_id}`, "1", { expirationTtl: 86400 * 3 });   // tell the payer once per order
+      const txt = status === "system_fail"
+        ? `Возникла ошибка у платёжного сервиса при обработке вашего платежа (заказ ${body.order_id}). Деньги не потеряны: мы уже знаем о проблеме. Напишите нам, и мы всё решим: https://t.me/hanballit`
+        : `Мы получили ваш платёж, но сумма меньше нужной (заказ ${body.order_id}). Так бывает из-за комиссии сети или курса. Доступ пока не открыт. Напишите нам, и мы вместе решим, как доплатить или вернуть деньги: https://t.me/hanballit`;
+      await tg(env, "sendMessage", { chat_id: uid0, text: txt }).catch(() => {});
+    }
     await notifyOwner(env, `<b>${PAY_WARN[status]}</b>\nСтатус: ${esc(status)}\n\n${details(await whoBlock(uid0))}${extra}`);
     return new Response("ok");
   }
@@ -656,9 +701,10 @@ async function processPaymentInner(env, body, status) {
     } else rec = await grantAccess(env, uid, { order: body.order_id, amount: body.payment_amount_usd || body.amount, currency: body.currency });
   }
   catch (e) { await env.SUBS.delete(`rcpt:${body.order_id}`).catch(() => {}); throw e; }   // grant failed: release the claim so the provider's retry can succeed
+  const banNote = (await isBanned(env, uid)) ? "\n\n🚫 Пользователь исключён (/ban): доступ записан, но в каналы его не пустят. Решите, возвращать ли деньги или снять бан: /unban " + uid : "";
   await notifyOwner(env, isCourse
-    ? `🎓 <b>ОПЛАТА ОБУЧЕНИЯ${status === "paid_over" ? " (переплата)" : ""}</b>\n\n${details(await whoBlock(uid))}\n⏳ Бонус-приват до: ${fmtDate(rec.until)}`
-    : `🛒 <b>НОВАЯ ОПЛАТА${status === "paid_over" ? " (переплата)" : ""}${cur ? " · продление" : ""}</b>\n\n${details(await whoBlock(uid))}\n⏳ Доступ до: ${fmtDate(rec.until)}`);
+    ? `🎓 <b>ОПЛАТА ОБУЧЕНИЯ${status === "paid_over" ? " (переплата)" : ""}</b>\n\n${details(await whoBlock(uid))}\n⏳ Бонус-приват до: ${fmtDate(rec.until)}${banNote}`
+    : `🛒 <b>НОВАЯ ОПЛАТА${status === "paid_over" ? " (переплата)" : ""}${cur ? " · продление" : ""}</b>\n\n${details(await whoBlock(uid))}\n⏳ Доступ до: ${fmtDate(rec.until)}${banNote}`);
   try {
     const r = await tg(env, "sendMessage", {
       chat_id: uid,
@@ -879,10 +925,8 @@ async function handleUpdate(env, ctx, upd) {
 
   const rev = text.match(/^\/revoke\s+(\d+)\s*$/);
   if (rev) {
-    const had = await env.SUBS.get(`paid:${rev[1]}`);
-    await env.SUBS.delete(`paid:${rev[1]}`);
-    await env.SUBS.delete(`lastord:${rev[1]}`);   // otherwise the status check would find the old paid order and grant access again
-    await tg(env, "sendMessage", { chat_id: chatId, text: had ? `Оплата пользователя ${rev[1]} отозвана: доступ закрыт${privOn(env) && (await kickFromPrivate(env, rev[1])) === "removed" ? ", из закрытого канала убран" : ""}.` : `У пользователя ${rev[1]} не было оплаты.` });
+    const r = await revokePrivat(env, rev[1]);
+    await tg(env, "sendMessage", { chat_id: chatId, text: r.had ? `Оплата пользователя ${rev[1]} отозвана: доступ закрыт${r.removed ? ", из закрытого канала убран" : ""}.` : `У пользователя ${rev[1]} не было оплаты.` });
     return;
   }
 
@@ -894,11 +938,8 @@ async function handleUpdate(env, ctx, upd) {
   }
   const rc = text.match(/^\/revokecourse\s+(\d+)\s*$/);
   if (rc) {
-    const had = await getCourse(env, rc[1]);
-    await env.SUBS.delete(`course:${rc[1]}`);
-    let kicked = 0;
-    for (const t of Object.keys(CFG.COURSE)) { const ch = env["COURSE_CH_" + t.toUpperCase()]; if (!ch) continue; const b = await tg(env, "banChatMember", { chat_id: ch, user_id: Number(rc[1]) }).catch(() => null); if (b && b.ok) { kicked++; await tg(env, "unbanChatMember", { chat_id: ch, user_id: Number(rc[1]), only_if_banned: true }).catch(() => {}); } }
-    await tg(env, "sendMessage", { chat_id: chatId, text: had ? `Обучение пользователя ${rc[1]} отозвано${kicked ? ", из каналов обучения убран" : ""}.` : `У пользователя ${rc[1]} не было обучения.` });
+    const r = await revokeCourse(env, rc[1]);
+    await tg(env, "sendMessage", { chat_id: chatId, text: r.had ? `Обучение пользователя ${rc[1]} отозвано${r.kicked ? ", из каналов обучения убран" : ""}.` : `У пользователя ${rc[1]} не было обучения.` });
     return;
   }
   const gr = text.match(/^\/grant\s+(\d+)\s*$/);
@@ -953,7 +994,8 @@ async function handleUpdate(env, ctx, upd) {
       await env.SUBS.put(`ban:${id}`, JSON.stringify({ ts: Date.now() }));
       await delSub(env, id);
       bannedCache.set(id, { v: true, t: Date.now() });
-      await tg(env, "sendMessage", { chat_id: chatId, text: `Пользователь ${id} исключён: ему закрыт доступ к материалам, рассылки ему не уходят. Вернуть: /unban ${id}` });
+      const outP = privOn(env) ? (await kickFromPrivate(env, id)) === "removed" : false, outC = await kickFromCourseChannels(env, id);   // also taken out of the paid channels; payment records stay, so /unban restores everything
+      await tg(env, "sendMessage", { chat_id: chatId, text: `Пользователь ${id} исключён: ему закрыт доступ к материалам, рассылки ему не уходят${outP || outC ? ", из закрытых каналов убран" : ""}. Вернуть: /unban ${id}` });
     } else {
       await env.SUBS.delete(`ban:${id}`);
       bannedCache.set(id, { v: false, t: Date.now() });
