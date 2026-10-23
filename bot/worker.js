@@ -350,7 +350,7 @@ function offerFor(env, body) {
   return { product: "privat", amount: String(env.PAY_AMOUNT || CFG.PAY_AMOUNT), currency: cur, desc: "P2P Study: доступ в закрытый канал" };
 }
 // saved with every order: what was sold and the amount/currency the invoice was created for (checked when the payment notice arrives)
-const ordExtra = (o) => ({ ...(o && o.product === "course" ? { product: "course", tier: o.tier } : {}), ...(o && o.amount ? { exp: { a: String(o.amount), c: String(o.currency || "") } } : {}) });
+const ordExtra = (o) => ({ ...(o && o.product === "course" ? { product: "course", tier: o.tier } : {}), ...(o && o.amount ? { exp: { a: String(o.amount), c: String(o.currency || "") } } : {}), ...(o && o.n ? { n: o.n } : {}) });
 async function createInvoice2328(env, user, offer) {
   offer = offer || offerFor(env, null);
   const order = newOrderId(user.id);
@@ -365,7 +365,7 @@ async function createInvoice2328(env, user, offer) {
     ttl_seconds: CFG.PAY_LIFETIME,
   });
   if (!r.ok || !r.j.result.url) return { error: (r.j && (r.j.message || r.j.error)) || "2328 " + r.status };
-  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: r.j.result.uuid, p: "2328", ...ordExtra(offer), who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
+  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: r.j.result.uuid, p: "2328", url: r.j.result.url, ...ordExtra(offer), who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
   await env.SUBS.put(`lastord:${user.id}`, order, { expirationTtl: 60 * 60 * 24 });
   return { url: r.j.result.url, order };
 }
@@ -449,7 +449,7 @@ async function createInvoiceCryptoBot(env, user, offer) {
   });
   const inv = r.j && r.j.result;
   if (!r.ok || !inv.bot_invoice_url) return { error: (r.j && r.j.error && (r.j.error.name || r.j.error.code)) || "cryptobot " + r.status };
-  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: String(inv.invoice_id), p: "cryptobot", ...ordExtra(offer), who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
+  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: String(inv.invoice_id), p: "cryptobot", url: inv.bot_invoice_url, tg: true, ...ordExtra(offer), who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
   await env.SUBS.put(`lastord:${user.id}`, order, { expirationTtl: 60 * 60 * 24 });
   return { url: inv.bot_invoice_url, order, tg: true };
 }
@@ -511,7 +511,8 @@ async function createInvoice(env, user, offer) {
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.result || !j.result.url) return { error: j.message || (j.errors ? JSON.stringify(j.errors) : "heleket " + r.status) };
-  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: j.result.uuid, ...ordExtra(offer), who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
+  await env.SUBS.put(`ord:${order}`, JSON.stringify({ uid: user.id, ts: Date.now(), uuid: j.result.uuid, url: j.result.url, ...ordExtra(offer), who: { u: user.username || "", n: user.first_name || "" } }), { expirationTtl: 60 * 60 * 24 * 30 });
+  await env.SUBS.put(`lastord:${user.id}`, order, { expirationTtl: 60 * 60 * 24 });
   return { url: j.result.url, order };
 }
 
@@ -1222,6 +1223,14 @@ const handlers = {
         const c = await getCourse(env, user.id);
         if (courseRank(c) >= CFG.COURSE[offer.tier].rank) return json({ ok: true, paid: true, course: { tier: c.tier } }, 200, h);   // this tier (or a higher one) is already bought
       } else if (hasAccess(paid) && paid.until - Date.now() > 10 * 86400000) return json({ ok: true, paid: true, until: paid.until }, 200, h);   // already paid, renewal opens 10 days before the end
+      // an open invoice for the same thing is handed out again (no new invoice, no KV writes); at most 20 new invoices per user per day
+      const lastOrder = await env.SUBS.get(`lastord:${user.id}`);
+      const prevOrd = lastOrder ? JSON.parse((await env.SUBS.get(`ord:${lastOrder}`)) || "null") : null;
+      const sameThing = prevOrd && (prevOrd.product || "privat") === offer.product && (offer.product !== "course" || prevOrd.tier === offer.tier) && (prevOrd.p || "heleket") === prov;
+      if (sameThing && prevOrd.url && Date.now() - prevOrd.ts < (CFG.PAY_LIFETIME - 120) * 1000 && !(await env.SUBS.get(`rcpt:${lastOrder}`))) return json({ ok: true, url: prevOrd.url, tg: !!prevOrd.tg }, 200, h);
+      const madeToday = prevOrd && Date.now() - prevOrd.ts < 86400000 ? (prevOrd.n || 1) : 0;
+      if (madeToday >= 20) return tooMany(h);
+      offer.n = madeToday + 1;
       let inv = prov === "cryptobot" ? await createInvoiceCryptoBot(env, user, offer) : prov === "2328" ? await createInvoice2328(env, user, offer) : await createInvoice(env, user, offer);
       if (inv.error && prov !== "cryptobot" && env.CRYPTOBOT_TOKEN) {   // main provider down: fall back to Crypto Bot instead of a dead end
         await dbg(env, { pay: "FALLBACK to cryptobot: " + String(inv.error).slice(0, 60) });
