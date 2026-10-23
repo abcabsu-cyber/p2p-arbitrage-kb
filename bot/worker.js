@@ -225,7 +225,7 @@ async function courseSweep(env) {
   for (const k of l.keys) {
     const [, uid, tier] = k.name.split(":");
     const ch = env["COURSE_CH_" + String(tier).toUpperCase()];
-    if (ch && CFG.COURSE[tier] && courseRank(await getCourse(env, uid)) >= CFG.COURSE[tier].rank) {
+    if (ch && tierOf(tier) && courseRank(await getCourse(env, uid)) >= tierOf(tier).rank) {
       const r = await tg(env, "approveChatJoinRequest", { chat_id: ch, user_id: Number(uid) }).catch(() => null);
       if (r && r.ok) await tg(env, "sendMessage", { chat_id: Number(uid), text: `Обучение началось! Заявка в канал «${CFG.COURSE[tier].name}» одобрена ✅` }).catch(() => {});
     }
@@ -317,17 +317,25 @@ async function call2328(env, path, obj) {
   return { ok: r.ok && j.state === 0 && !!j.result, j, status: r.status };
 }
 // what is being bought: the private channel (default) or a course tier
+// tariff lookup that ignores inherited names such as "__proto__" or "constructor"
+const tierOf = (t) => (typeof t === "string" && Object.prototype.hasOwnProperty.call(CFG.COURSE, t) ? CFG.COURSE[t] : null);
+// unique order number: time + random part, so two invoices created in the same millisecond never share an id
+function newOrderId(uid) {
+  const r = new Uint8Array(6); crypto.getRandomValues(r);
+  return `u${uid}-${Date.now().toString(36)}${[...r].map((x) => x.toString(36).padStart(2, "0")).join("")}`.toLowerCase();
+}
 function offerFor(env, body) {
-  const t = body && body.product === "course" ? CFG.COURSE[body.tier] : null;
+  const t = body && body.product === "course" ? tierOf(body.tier) : null;
   if (body && body.product === "course" && !t) return null;
   const cur = String(env.PAY_CURRENCY || CFG.PAY_CURRENCY);
   if (t) return { product: "course", tier: body.tier, amount: t.amount, currency: "RUB", desc: `P2P Study: обучение, тариф «${t.name}»` };
   return { product: "privat", amount: String(env.PAY_AMOUNT || CFG.PAY_AMOUNT), currency: cur, desc: "P2P Study: доступ в закрытый канал" };
 }
-const ordExtra = (o) => (o && o.product === "course" ? { product: "course", tier: o.tier } : {});
+// saved with every order: what was sold and the amount/currency the invoice was created for (checked when the payment notice arrives)
+const ordExtra = (o) => ({ ...(o && o.product === "course" ? { product: "course", tier: o.tier } : {}), ...(o && o.amount ? { exp: { a: String(o.amount), c: String(o.currency || "") } } : {}) });
 async function createInvoice2328(env, user, offer) {
   offer = offer || offerFor(env, null);
-  const order = `u${user.id}-${Date.now().toString(36)}`;
+  const order = newOrderId(user.id);
   const r = await call2328(env, "/v1/payment", {
     amount: offer.amount,
     currency: offer.currency,
@@ -408,7 +416,7 @@ async function callCryptoBot(env, method, params, get) {
 }
 async function createInvoiceCryptoBot(env, user, offer) {
   offer = offer || offerFor(env, null);
-  const order = `u${user.id}-${Date.now().toString(36)}`;
+  const order = newOrderId(user.id);
   const r = await callCryptoBot(env, "createInvoice", {
     currency_type: "fiat",
     fiat: offer.currency,
@@ -467,7 +475,7 @@ async function reconcileCryptoBot(env, order, ord) {
 
 async function createInvoice(env, user, offer) {
   offer = offer || offerFor(env, null);
-  const order = `u${user.id}-${Date.now().toString(36)}`;
+  const order = newOrderId(user.id);
   const body = JSON.stringify({
     amount: offer.amount,
     currency: offer.currency,
@@ -489,22 +497,35 @@ async function createInvoice(env, user, offer) {
   return { url: j.result.url, order };
 }
 
+const hasOrder = (rec, order) => !!(rec && order && Array.isArray(rec.orders) && rec.orders.includes(order));
+// Idempotent: an order that is already counted is never added twice. KV has no atomic writes, so after writing we read the record back;
+// if a concurrent write replaced ours (our order is missing), we add it again on top of the newer record.
 async function grantAccess(env, uid, info) {
-  const cur = await getPaid(env, uid);
-  const base = Math.max(Date.now(), CFG.PRIVAT_START, cur && cur.until > Date.now() ? cur.until : 0);
-  const rec = { until: base + CFG.PRIVAT_DAYS * 86400000, ts: Date.now(), orders: [...((cur && cur.orders) || []), info.order].filter(Boolean), amount: info.amount, currency: info.currency };
-  await env.SUBS.put(`paid:${uid}`, JSON.stringify(rec), { metadata: { until: rec.until, ts: rec.ts, amount: rec.amount, currency: rec.currency, n: rec.orders.length } });
+  let rec, cur;
+  for (let i = 0; i < 3; i++) {
+    cur = await getPaid(env, uid);
+    if (hasOrder(cur, info.order)) return cur;   // this order is already counted (repeated or simultaneous delivery)
+    const base = Math.max(Date.now(), CFG.PRIVAT_START, cur && cur.until > Date.now() ? cur.until : 0);
+    rec = { until: base + CFG.PRIVAT_DAYS * 86400000, ts: Date.now(), orders: [...((cur && cur.orders) || []), info.order].filter(Boolean), amount: info.amount, currency: info.currency };
+    await env.SUBS.put(`paid:${uid}`, JSON.stringify(rec), { metadata: { until: rec.until, ts: rec.ts, amount: rec.amount, currency: rec.currency, n: rec.orders.length } });
+    if (hasOrder(await getPaid(env, uid), info.order)) break;
+  }
   if (env.PRIVATE_CHANNEL && cur) await env.SUBS.delete(`kick:${uid}`).catch(() => {});   // renewal: the next expiry is handled again
   return rec;
 }
 
 const getCourse = async (env, uid) => { const r = await env.SUBS.get(`course:${uid}`); return r ? JSON.parse(r) : null; };
-const courseRank = (c) => (c && CFG.COURSE[c.tier] ? CFG.COURSE[c.tier].rank : 0);
+const courseRank = (c) => (c && tierOf(c.tier) ? tierOf(c.tier).rank : 0);
 async function grantCourse(env, uid, tier, info) {
-  const cur = await getCourse(env, uid);
-  const best = cur && courseRank(cur) >= CFG.COURSE[tier].rank ? cur.tier : tier;   // keep the highest tier bought
-  const rec = { tier: best, tiers: [...new Set([...((cur && cur.tiers) || []), tier])], ts: Date.now(), orders: [...((cur && cur.orders) || []), info.order].filter(Boolean), amount: info.amount, currency: info.currency };
-  await env.SUBS.put(`course:${uid}`, JSON.stringify(rec), { metadata: { tier: rec.tier, ts: rec.ts, n: rec.orders.length } });
+  let rec;
+  for (let i = 0; i < 3; i++) {
+    const cur = await getCourse(env, uid);
+    if (hasOrder(cur, info.order)) return cur;   // already counted
+    const best = cur && courseRank(cur) >= tierOf(tier).rank ? cur.tier : tier;   // keep the highest tier bought
+    rec = { tier: best, tiers: [...new Set([...((cur && cur.tiers) || []), tier])], ts: Date.now(), orders: [...((cur && cur.orders) || []), info.order].filter(Boolean), amount: info.amount, currency: info.currency };
+    await env.SUBS.put(`course:${uid}`, JSON.stringify(rec), { metadata: { tier: rec.tier, ts: rec.ts, n: rec.orders.length } });
+    if (hasOrder(await getCourse(env, uid), info.order)) break;
+  }
   return rec;
 }
 async function handlePayWebhook(env, req) {
@@ -521,6 +542,17 @@ async function handlePayWebhook(env, req) {
   const status = body.status;
   await dbg(env, { pay: `${status} ${body.order_id}`, ip: ip === CFG.HELEKET_IP ? "ok" : ip });
   return processPayment(env, body, status);
+}
+
+// "" when the notice fits the order, otherwise a short reason
+function orderMismatch(ord, body) {
+  if (ord.uuid && body.uuid && String(ord.uuid) !== String(body.uuid)) return "номер счёта в уведомлении отличается от созданного";
+  const e = ord.exp;
+  if (e && body.currency && String(body.currency).toUpperCase() === String(e.c).toUpperCase()) {
+    const paid = Number(body.amount), want = Number(e.a);
+    if (Number.isFinite(paid) && Number.isFinite(want) && paid + 0.005 < want) return `сумма ${body.amount} ${body.currency} меньше заказанной ${e.a}`;
+  }
+  return "";
 }
 
 async function processPayment(env, body, status) {
@@ -558,8 +590,8 @@ async function processPaymentInner(env, body, status) {
   ].filter(Boolean).join("\n");
   const ordKV = JSON.parse((await env.SUBS.get(`ord:${body.order_id}`)) || "null");
   const uid0 = ordKV ? ordKV.uid : Number(body.additional_data);
-  var isCourse = !!(ordKV && ordKV.product === "course" && CFG.COURSE[ordKV.tier]);
-  var courseName = isCourse ? CFG.COURSE[ordKV.tier].name : "";
+  var isCourse = !!(ordKV && ordKV.product === "course" && tierOf(ordKV.tier));
+  var courseName = isCourse ? tierOf(ordKV.tier).name : "";
 
   if (PAY_WARN[status]) {
     let extra = "";
@@ -579,18 +611,29 @@ async function processPaymentInner(env, body, status) {
     await notifyOwner(env, `<b>⚠️ Оплата без привязки к пользователю</b>\n\n${details(await whoBlock(0))}\n\nНужно разобраться вручную.`);
     return new Response("unknown order", { status: 200 });
   }
+  // the payment notice must belong to the invoice we created for this order (same invoice id, not less than the amount we asked for)
+  const mism = ordKV && env.PAY_BINDING !== "off" ? orderMismatch(ordKV, body) : "";
+  if (mism) {
+    if (!(await env.SUBS.get(`mm:${body.order_id}`))) {   // tell the owner once per order
+      await env.SUBS.put(`mm:${body.order_id}`, "1", { expirationTtl: 86400 * 3 });
+      await notifyOwner(env, `<b>⚠️ Данные платежа не совпали с заказом. Доступ не выдан</b>\nПричина: ${esc(mism)}\n\n${details(await whoBlock(uid))}\n\nЕсли оплата настоящая, выдайте доступ вручную: ${isCourse ? "/grantcourse " + uid + " " + ordKV.tier : "/grant " + uid}`);
+    }
+    return new Response("ok");
+  }
   if (await env.SUBS.get(`rcpt:${body.order_id}`)) return new Response("ok");   // this order was already processed (also after a /revoke)
   const cur = await getPaid(env, uid);
-  if (cur && cur.orders && cur.orders.includes(body.order_id)) return new Response("ok");   // repeated notification
   const curCourse = isCourse ? await getCourse(env, uid) : null;
-  if (curCourse && curCourse.orders && curCourse.orders.includes(body.order_id)) return new Response("ok");
+  const bonusOrder = "bonus:" + body.order_id;
+  const courseDone = isCourse && hasOrder(curCourse, body.order_id), bonusDone = isCourse && hasOrder(cur, bonusOrder);
+  if (isCourse ? (courseDone && bonusDone) : hasOrder(cur, body.order_id)) return new Response("ok");   // repeated notification
   const rcptVal = JSON.stringify({ uid, ts: Date.now(), status, amount: body.amount, currency: body.currency, usd: body.payment_amount_usd, payer: crypt, uuid: body.uuid, txid: body.txid || "" });
   await env.SUBS.put(`rcpt:${body.order_id}`, rcptVal, { expirationTtl: 86400 * 800 });   // claim before grant: stops sequential retries; KV is not atomic, so truly simultaneous deliveries are not blocked
   let rec, crec;
   try {
     if (isCourse) {
-      crec = await grantCourse(env, uid, ordKV.tier, { order: body.order_id, amount: body.payment_amount_usd || body.amount, currency: body.currency });
-      rec = await grantAccess(env, uid, { order: "bonus:" + body.order_id, amount: "bonus", currency: "" });   // bonus: a month of the private channel
+      // each step runs only if it is not done yet, so a retry after a half-finished grant completes the rest
+      if (!courseDone) crec = await grantCourse(env, uid, ordKV.tier, { order: body.order_id, amount: body.payment_amount_usd || body.amount, currency: body.currency });
+      rec = bonusDone ? cur : await grantAccess(env, uid, { order: bonusOrder, amount: "bonus", currency: "" });   // bonus: a month of the private channel
     } else rec = await grantAccess(env, uid, { order: body.order_id, amount: body.payment_amount_usd || body.amount, currency: body.currency });
   }
   catch (e) { await env.SUBS.delete(`rcpt:${body.order_id}`).catch(() => {}); throw e; }   // grant failed: release the claim so the provider's retry can succeed
@@ -1145,7 +1188,7 @@ const handlers = {
         const rk = "rc" + user.id, rNow = Date.now();
         let course = await getCourse(env, user.id);
         if ((!hasAccess(paid) || (body.product === "course" && !course)) && !(RECON.get(rk) > rNow - 15000)) { RECON.set(rk, rNow); if (RECON.size > 2000) RECON.clear(); try { await reconcile2328(env, user.id); paid = await getPaid(env, user.id); course = await getCourse(env, user.id); } catch (e) { await dbg(env, { reconcile: "2328 FAILED " + String(e && e.message || e).slice(0, 80) }); } }   // lost 2328/Crypto Bot webhook, orders from the last 24 h (Heleket has no reconcile path)
-        const cinfo = course && CFG.COURSE[course.tier] ? { tier: course.tier, name: CFG.COURSE[course.tier].name, join: env["COURSE_JOIN_" + course.tier.toUpperCase()] || undefined } : undefined;
+        const cinfo = course && tierOf(course.tier) ? { tier: course.tier, name: CFG.COURSE[course.tier].name, join: env["COURSE_JOIN_" + course.tier.toUpperCase()] || undefined } : undefined;
         return json({ ok: true, paid: hasAccess(paid), until: paid ? paid.until : null, join: hasAccess(paid) && env.JOIN_URL ? env.JOIN_URL : undefined, course: cinfo }, 200, h);
       }
       RECON.delete("rc" + user.id);   // new invoice: the next status check may ask the provider right away
